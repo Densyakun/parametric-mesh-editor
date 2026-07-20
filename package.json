@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "postinstall": "node scripts/setup-vendor.mjs",
-    "dev": "vercel dev",
+    "dev": "pnpm --filter @meshnative/app dev",
+    "dev:vercel": "vercel dev",
     "build": "pnpm --filter @meshnative/core build && pnpm --filter @meshnative/app build",
-    "lint": "pnpm --filter @meshnative/core lint && pnpm --filter @meshnative/app lint",
-    "start": "vercel start"
+    "lint": "pnpm --filter @meshnative/core lint && pnpm --filter @meshnative/app lint"
   },
   "devDependencies": {
     "vercel": "^37.0.0"
