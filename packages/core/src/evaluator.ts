@@ -65,18 +65,37 @@ export class DSLEvaluator {
     const graph = new DependencyGraph();
 
     try {
+      // Pre-pass: extract Parameter values for variable injection
+      const paramValues: Record<string, any> = {};
+      const paramRegex = /<Parameter\s+name=["'](\w+)["']\s+value=\{([^}]+)\}/g;
+      let match;
+      while ((match = paramRegex.exec(dsl)) !== null) {
+        const name = match[1];
+        let value: any;
+        try {
+          value = JSON.parse(match[2]);
+        } catch {
+          value = Number(match[2]) || match[2];
+        }
+        paramValues[name] = value;
+      }
+
       // Create source file
       const sourceFile = this.project.createSourceFile('model.tsx', dsl, { overwrite: true });
 
       // Compile to JSON AST
       const sourceFileJson = compileSourceFileToJSON(sourceFile);
 
-      // Create variables scope with built-in components
-      const variables: any[] = [this.createBuiltinScope(parameters, features, graph)];
+      // Create scope with built-in components AND parameter variables
+      const scope = this.createBuiltinScope(parameters, features, graph);
+      for (const [key, value] of Object.entries(paramValues)) {
+        scope[key] = value;
+      }
+
+      const variables: any[] = [scope];
 
       // Evaluate the AST
       evalSyntaxList(sourceFileJson.syntaxList, variables, (moduleName: string) => {
-        // Module resolver - not used for now
         return { isInitializing: false, exports: { object: {} } };
       });
 
