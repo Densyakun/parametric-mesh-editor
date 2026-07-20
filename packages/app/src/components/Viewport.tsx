@@ -37,7 +37,7 @@ function MeshVisualization({ mesh }: { mesh: MeshData }) {
         color="#8899aa"
         roughness={0.5}
         metalness={0.3}
-        side={THREE.DoubleSide}
+        flatShading={true}
       />
     </mesh>
   );

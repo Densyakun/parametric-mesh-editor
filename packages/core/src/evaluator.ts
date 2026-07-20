@@ -57,35 +57,16 @@ export class DSLEvaluator {
     const graph = new DependencyGraph();
 
     try {
-      // Step 1: Compile TSX to plain JS using ts-morph emit
       const sourceFile = this.project.createSourceFile('model.tsx', dsl, { overwrite: true });
-      const outputFiles = sourceFile.getEmitOutput().getOutputFiles();
-      const compiledJS = outputFiles.length > 0 ? outputFiles[0].getText() : dsl;
+      const sourceFileJson = compileSourceFileToJSON(sourceFile);
 
-      // Step 2: Parse the compiled JS with tsx-safe-eval
-      // Recreate as .ts file so ts-morph parses it as JS (not TSX)
-      const jsFile = this.project.createSourceFile('model.js', compiledJS, { overwrite: true });
-      const sourceFileJson = compileSourceFileToJSON(jsFile);
-
-      // Step 3: Build scope with built-in components
       const scope = this.createBuiltinScope(parameters, features, graph);
-
-      // _jsx is the automatic JSX runtime function - route it to our component scope
-      scope['_jsx'] = (component: any, props: any) => {
-        if (typeof component === 'function') {
-          return component(props ?? {});
-        }
-        return null;
-      };
-
       const variables: any[] = [scope];
 
-      // Step 4: Evaluate
       evalSyntaxList(sourceFileJson.syntaxList, variables, (moduleName: string) => {
         return { isInitializing: false, exports: { object: {} } };
       });
 
-      // Collect the last mesh from features
       for (let i = features.length - 1; i >= 0; i--) {
         if (features[i].mesh) {
           resultMesh = features[i].mesh;
@@ -106,7 +87,6 @@ export class DSLEvaluator {
   ): Record<string, any> {
     const scope: Record<string, any> = {};
 
-    // Register all standard features as callable components
     const allFeatures = getAllFeatures();
     for (const feature of allFeatures) {
       scope[feature.name] = this.createFeatureComponent(feature, features, parameters, graph);
@@ -131,22 +111,19 @@ export class DSLEvaluator {
         }
       }
 
-      // Check if this feature has Parameter-style params
-      if (featureConfig.schema.parameters.length > 0) {
-        for (const paramDef of featureConfig.schema.parameters) {
-          if (!(paramDef.name in params)) {
-            params[paramDef.name] = paramDef.value;
-          }
-          parameters.push({
-            name: paramDef.name,
-            value: params[paramDef.name],
-            type: paramDef.type,
-            min: paramDef.min,
-            max: paramDef.max,
-            step: paramDef.step,
-            displayName: paramDef.displayName,
-          });
+      for (const paramDef of featureConfig.schema.parameters) {
+        if (!(paramDef.name in params)) {
+          params[paramDef.name] = paramDef.value;
         }
+        parameters.push({
+          name: paramDef.name,
+          value: params[paramDef.name],
+          type: paramDef.type,
+          min: paramDef.min,
+          max: paramDef.max,
+          step: paramDef.step,
+          displayName: paramDef.displayName,
+        });
       }
 
       const context: EvaluationContext = {
