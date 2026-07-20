@@ -40,11 +40,11 @@ export interface AppState {
 
   // Actions
   setDsl: (dsl: string) => void;
-  evaluateDsl: () => void;
-  updateParameter: (name: string, value: any) => void;
+  evaluateDsl: () => Promise<void>;
+  updateParameter: (name: string, value: any) => Promise<void>;
   selectFeature: (id: string | null) => void;
   setProject: (id: string, name: string) => void;
-  resetToDefault: () => void;
+  resetToDefault: () => Promise<void>;
 }
 
 const evaluator = new DSLEvaluator();
@@ -68,27 +68,20 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setDsl: (dsl: string) => {
     set({ dsl, isDirty: true });
-    // Auto-evaluate
-    try {
-      const result = evaluator.evaluate(dsl);
-      // Handle sync result (it's actually sync in our implementation)
-      handleResult(result as unknown as DSLResult, set, get);
-    } catch (e: any) {
-      set({ dslErrors: [e.message] });
-    }
+    get().evaluateDsl();
   },
 
-  evaluateDsl: () => {
+  evaluateDsl: async () => {
     const { dsl } = get();
     try {
-      const result = evaluator.evaluate(dsl);
-      handleResult(result as unknown as DSLResult, set, get);
+      const result = await evaluator.evaluate(dsl);
+      handleResult(result, set, get);
     } catch (e: any) {
       set({ dslErrors: [e.message] });
     }
   },
 
-  updateParameter: (name: string, value: any) => {
+  updateParameter: async (name: string, value: any) => {
     const { dsl, parameterValues } = get();
     const newValues = { ...parameterValues, [name]: value };
 
@@ -99,8 +92,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // Re-evaluate
     try {
-      const result = evaluator.evaluate(newDsl);
-      handleResult(result as unknown as DSLResult, set, get);
+      const result = await evaluator.evaluate(newDsl);
+      handleResult(result, set, get);
     } catch (e: any) {
       set({ dslErrors: [e.message] });
     }
@@ -114,7 +107,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ projectId: id, projectName: name, isDirty: false });
   },
 
-  resetToDefault: () => {
+  resetToDefault: async () => {
     set({
       dsl: DEFAULT_DSL,
       dslResult: null,
@@ -130,8 +123,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
     // Re-evaluate default
     try {
-      const result = evaluator.evaluate(DEFAULT_DSL);
-      handleResult(result as unknown as DSLResult, set, get);
+      const result = await evaluator.evaluate(DEFAULT_DSL);
+      handleResult(result, set, get);
     } catch (e: any) {
       set({ dslErrors: [e.message] });
     }

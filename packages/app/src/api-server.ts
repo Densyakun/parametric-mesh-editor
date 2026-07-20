@@ -111,7 +111,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
         return;
       }
       const startTime = performance.now();
-      const result: DSLResult = evaluator.evaluate(body.dsl);
+      const result: DSLResult = await evaluator.evaluate(body.dsl);
       const evaluationTime = performance.now() - startTime;
       sendJSON(res, 200, {
         success: result.errors.length === 0,
@@ -155,7 +155,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
         sendJSON(res, 400, { error: 'Missing "dsl" field' });
         return;
       }
-      const result = evaluator.evaluate(body.dsl);
+      const result = await evaluator.evaluate(body.dsl);
       sendJSON(res, 200, {
         valid: result.errors.length === 0,
         errors: result.errors,
