@@ -3,13 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npm run dev -w packages/app",
-    "build": "npm run build -w packages/core && npm run build -w packages/app",
-    "lint": "npm run lint -w packages/core && npm run lint -w packages/app"
+    "postinstall": "node scripts/setup-vendor.mjs",
+    "dev": "concurrently -n api,app -c blue,green \"pnpm dev:api\" \"pnpm dev:app\"",
+    "dev:app": "pnpm --filter @meshnative/app dev",
+    "dev:api": "pnpm --filter @meshnative/app dev:api",
+    "build": "pnpm --filter @meshnative/core build && pnpm --filter @meshnative/app build",
+    "lint": "pnpm --filter @meshnative/core lint && pnpm --filter @meshnative/app lint"
   },
-  "workspaces": [
-    "packages/*"
-  ],
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  },
   "engines": {
     "node": ">=22"
   }
