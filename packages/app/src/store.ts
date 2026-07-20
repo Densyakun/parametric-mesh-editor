@@ -1,8 +1,18 @@
 // Application state store using Zustand
 
 import { create } from 'zustand';
-import { DSLEvaluator, type DSLResult, type EvaluatedFeature } from '@meshnative/core';
-import type { ParameterDef, MeshData, GraphNode } from '@meshnative/core';
+import {
+  DSLEvaluator,
+  CommandHistory,
+  ParameterChangeCommand,
+  DSLEditCommand,
+  generateCommandId,
+  type DSLResult,
+  type EvaluatedFeature,
+  type HistoryState,
+  type CommandContext,
+} from '@meshnative/core';
+import type { ParameterDef, MeshData } from '@meshnative/core';
 
 const DEFAULT_DSL = `const width = 10;
 const height = 10;
@@ -10,58 +20,79 @@ const depth = 10;
 <Box width={width} height={height} depth={depth} />`;
 
 export interface AppState {
-  // DSL
   dsl: string;
   dslResult: DSLResult | null;
   dslErrors: string[];
-
-  // Parameters
   parameters: ParameterDef[];
   parameterValues: Record<string, any>;
-
-  // Features
   features: EvaluatedFeature[];
   selectedFeatureId: string | null;
-
-  // Mesh
   currentMesh: MeshData | null;
-
-  // Project
   projectId: string | null;
   projectName: string;
   isDirty: boolean;
-
-  // Actions
-  setDsl: (dsl: string) => void;
+  historyState: HistoryState;
+  setDsl: (dsl: string, skipHistory?: boolean) => void;
   evaluateDsl: () => Promise<void>;
-  updateParameter: (name: string, value: any) => Promise<void>;
+  updateParameter: (name: string, value: any) => void;
   selectFeature: (id: string | null) => void;
   setProject: (id: string, name: string) => void;
   resetToDefault: () => Promise<void>;
+  undo: () => void;
+  redo: () => void;
 }
 
 const evaluator = new DSLEvaluator();
+const history = new CommandHistory(100);
+
+function createCommandContext(get: () => AppState, set: (partial: Partial<AppState>) => void): CommandContext {
+  return {
+    getDSL: () => get().dsl,
+    setDSL: (dsl: string) => set({ dsl }),
+    getParameter: (name: string) => get().parameterValues[name],
+    setParameter: (name: string, value: any) => {
+      const { dsl, parameterValues } = get();
+      const newValues = { ...parameterValues, [name]: value };
+      const newDsl = updateDslParameter(dsl, name, value);
+      set({ parameterValues: newValues, dsl: newDsl });
+    },
+    requestEvaluation: () => {
+      const { dsl } = get();
+      evaluator.evaluate(dsl).then(result => handleResult(result, set, get));
+    },
+  };
+}
 
 export const useAppStore = create<AppState>((set, get) => ({
   dsl: DEFAULT_DSL,
   dslResult: null,
   dslErrors: [],
-
   parameters: [],
   parameterValues: {},
-
   features: [],
   selectedFeatureId: null,
-
   currentMesh: null,
-
   projectId: null,
   projectName: 'Untitled',
   isDirty: false,
+  historyState: history.getState(),
 
-  setDsl: (dsl: string) => {
-    set({ dsl, isDirty: true });
-    get().evaluateDsl();
+  setDsl: (dsl: string, skipHistory: boolean = false) => {
+    if (skipHistory) {
+      set({ dsl, isDirty: true });
+      get().evaluateDsl();
+      return;
+    }
+
+    const ctx = createCommandContext(get, set);
+    const cmd = new DSLEditCommand(
+      generateCommandId(),
+      'Edit DSL',
+      Date.now(),
+      dsl
+    );
+    history.execute(cmd, ctx);
+    set({ isDirty: true, historyState: history.getState() });
   },
 
   evaluateDsl: async () => {
@@ -74,22 +105,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  updateParameter: async (name: string, value: any) => {
-    const { dsl, parameterValues } = get();
-    const newValues = { ...parameterValues, [name]: value };
-
-    // Update the DSL string with new parameter value
-    const newDsl = updateDslParameter(dsl, name, value);
-
-    set({ parameterValues: newValues, dsl: newDsl, isDirty: true });
-
-    // Re-evaluate
-    try {
-      const result = await evaluator.evaluate(newDsl);
-      handleResult(result, set, get);
-    } catch (e: any) {
-      set({ dslErrors: [e.message] });
-    }
+  updateParameter: (name: string, value: any) => {
+    const ctx = createCommandContext(get, set);
+    const cmd = new ParameterChangeCommand(
+      generateCommandId(),
+      `Change ${name}`,
+      Date.now(),
+      name,
+      value
+    );
+    history.execute(cmd, ctx);
+    set({ isDirty: true, historyState: history.getState() });
   },
 
   selectFeature: (id: string | null) => {
@@ -98,6 +124,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setProject: (id: string, name: string) => {
     set({ projectId: id, projectName: name, isDirty: false });
+    history.clear();
+    set({ historyState: history.getState() });
   },
 
   resetToDefault: async () => {
@@ -114,13 +142,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       projectName: 'Untitled',
       isDirty: false,
     });
-    // Re-evaluate default
+    history.clear();
+    set({ historyState: history.getState() });
     try {
       const result = await evaluator.evaluate(DEFAULT_DSL);
       handleResult(result, set, get);
     } catch (e: any) {
       set({ dslErrors: [e.message] });
     }
+  },
+
+  undo: () => {
+    const ctx = createCommandContext(get, set);
+    history.undo(ctx);
+    set({ historyState: history.getState() });
+  },
+
+  redo: () => {
+    const ctx = createCommandContext(get, set);
+    history.redo(ctx);
+    set({ historyState: history.getState() });
   },
 }));
 
@@ -144,14 +185,11 @@ function handleResult(
   });
 }
 
-// Helper: update a parameter value in DSL string
 function updateDslParameter(dsl: string, name: string, value: any): string {
-  // Match: const name = value;
   const regex = new RegExp(
     `(const\\s+${escapeRegex(name)}\\s*=\\s*)([^;]+)(;)`,
     'g'
   );
-
   return dsl.replace(regex, `$1${JSON.stringify(value)}$3`);
 }
 
@@ -159,6 +197,5 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Initialize by evaluating default DSL
 const store = useAppStore.getState();
 store.evaluateDsl();

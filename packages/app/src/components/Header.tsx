@@ -12,8 +12,11 @@ export function Header() {
   const projectName = useAppStore(state => state.projectName);
   const projectId = useAppStore(state => state.projectId);
   const isDirty = useAppStore(state => state.isDirty);
+  const historyState = useAppStore(state => state.historyState);
   const setProject = useAppStore(state => state.setProject);
   const resetToDefault = useAppStore(state => state.resetToDefault);
+  const undo = useAppStore(state => state.undo);
+  const redo = useAppStore(state => state.redo);
   const [saving, setSaving] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
@@ -61,6 +64,23 @@ export function Header() {
 
       <div style={centerStyle}>
         <button onClick={resetToDefault} style={buttonStyle}>New</button>
+        <button
+          onClick={undo}
+          style={historyState.canUndo ? buttonStyle : { ...buttonStyle, opacity: 0.4, cursor: 'not-allowed' }}
+          disabled={!historyState.canUndo}
+          title="Undo (Ctrl+Z)"
+        >
+          Undo
+        </button>
+        <button
+          onClick={redo}
+          style={historyState.canRedo ? buttonStyle : { ...buttonStyle, opacity: 0.4, cursor: 'not-allowed' }}
+          disabled={!historyState.canRedo}
+          title="Redo (Ctrl+Y)"
+        >
+          Redo
+        </button>
+        <span style={separatorStyle}>|</span>
         {user && (
           <>
             <button onClick={handleSave} style={saveButtonStyle} disabled={saving}>

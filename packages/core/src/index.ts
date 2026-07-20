@@ -5,3 +5,4 @@ export * from './mesh.js';
 export * from './graph.js';
 export * from './features.js';
 export * from './evaluator.js';
+export * from './command.js';
