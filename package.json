@@ -4,13 +4,14 @@
   "type": "module",
   "scripts": {
     "postinstall": "node scripts/setup-vendor.mjs",
-    "dev": "pnpm --filter @meshnative/app dev",
-    "dev:vercel": "vercel dev",
+    "dev": "concurrently -n api,app -c blue,green \"pnpm dev:api\" \"pnpm dev:app\"",
+    "dev:app": "pnpm --filter @meshnative/app dev",
+    "dev:api": "pnpm --filter @meshnative/app dev:api",
     "build": "pnpm --filter @meshnative/core build && pnpm --filter @meshnative/app build",
     "lint": "pnpm --filter @meshnative/core lint && pnpm --filter @meshnative/app lint"
   },
   "devDependencies": {
-    "vercel": "^37.0.0"
+    "concurrently": "^9.0.0"
   },
   "engines": {
     "node": ">=22"
