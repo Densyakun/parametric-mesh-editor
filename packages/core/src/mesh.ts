@@ -57,20 +57,20 @@ export class HalfEdgeMesh {
     ]);
 
     // 6 faces, each with 4 vertices (quads split into triangles)
-    // 12 triangles = 36 indices
+    // 12 triangles = 36 indices (CCW winding for outward normals)
     const indices = [
-      // Front
-      0, 1, 2, 0, 2, 3,
-      // Back
-      5, 4, 7, 5, 7, 6,
-      // Top
-      3, 2, 6, 3, 6, 7,
-      // Bottom
-      4, 5, 1, 4, 1, 0,
-      // Right
-      1, 5, 6, 1, 6, 2,
-      // Left
-      4, 0, 3, 4, 3, 7,
+      // Front (z-)
+      0, 2, 1, 0, 3, 2,
+      // Back (z+)
+      5, 7, 4, 5, 6, 7,
+      // Top (y+)
+      3, 6, 2, 3, 7, 6,
+      // Bottom (y-)
+      4, 1, 5, 4, 0, 1,
+      // Right (x+)
+      1, 6, 5, 1, 2, 6,
+      // Left (x-)
+      4, 3, 0, 4, 7, 3,
     ];
 
     return HalfEdgeMesh.fromIndexedTriangles(positions, new Uint32Array(indices));
@@ -102,8 +102,8 @@ export class HalfEdgeMesh {
         const c = a + 1;
         const d = b + 1;
 
-        indices.push(a, b, c);
-        indices.push(c, b, d);
+        indices.push(a, c, b);
+        indices.push(c, d, b);
       }
     }
 
@@ -127,14 +127,14 @@ export class HalfEdgeMesh {
       positions.push(x, halfHeight, z);
     }
 
-    // Side faces
+    // Side faces (CCW winding for outward normals)
     for (let i = 0; i < segments; i++) {
       const a = i * 2;
       const b = i * 2 + 1;
       const c = (i + 1) * 2;
       const d = (i + 1) * 2 + 1;
-      indices.push(a, c, b);
-      indices.push(b, c, d);
+      indices.push(a, b, c);
+      indices.push(b, d, c);
     }
 
     // Top cap center
@@ -151,9 +151,9 @@ export class HalfEdgeMesh {
       );
     }
 
-    // Top cap faces
+    // Top cap faces (CCW winding for outward +y normal)
     for (let i = 0; i < segments; i++) {
-      indices.push(topCenter, topCenter + 1 + i, topCenter + 2 + i);
+      indices.push(topCenter, topCenter + 2 + i, topCenter + 1 + i);
     }
 
     // Bottom cap center
@@ -170,9 +170,9 @@ export class HalfEdgeMesh {
       );
     }
 
-    // Bottom cap faces (reversed winding)
+    // Bottom cap faces (CCW winding for outward -y normal)
     for (let i = 0; i < segments; i++) {
-      indices.push(bottomCenter, bottomCenter + 2 + i, bottomCenter + 1 + i);
+      indices.push(bottomCenter, bottomCenter + 1 + i, bottomCenter + 2 + i);
     }
 
     return HalfEdgeMesh.fromIndexedTriangles(

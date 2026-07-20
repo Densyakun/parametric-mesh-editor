@@ -39,8 +39,8 @@ importers:
         specifier: ^0.170.0
         version: 0.170.0
       tsx-safe-eval:
-        specifier: file:../../vendor/tsx-safe-eval
-        version: file:vendor/tsx-safe-eval
+        specifier: ^1.1.1
+        version: 1.1.1
       zustand:
         specifier: ^4.5.0
         version: 4.5.7(@types/react@19.2.17)(react@19.2.7)
@@ -73,8 +73,8 @@ importers:
         specifier: ^25.0.0
         version: 25.0.1
       tsx-safe-eval:
-        specifier: file:../../vendor/tsx-safe-eval
-        version: file:vendor/tsx-safe-eval
+        specifier: ^1.1.1
+        version: 1.1.1
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -1311,8 +1311,8 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  tsx-safe-eval@file:vendor/tsx-safe-eval:
-    resolution: {directory: vendor/tsx-safe-eval, type: directory}
+  tsx-safe-eval@1.1.1:
+    resolution: {integrity: sha512-KaYGk2CJW04CqUB7L3ZjLyPJfu85oou8WY1GpEulR0kLLWvwAhiZBnya99wR6FkadvyolR9YXOZeZm+uiTjcxQ==}
 
   tsx@4.23.1:
     resolution: {integrity: sha512-GQHnkIfxyx1wYCOS/wonik5MVRZU9hi1TEZmzGZSCJB1y9YgoZ8H6itNE/u4suE+yLmOzuE4E5S4TZ/ZX2wcWQ==}
@@ -2532,7 +2532,7 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tsx-safe-eval@file:vendor/tsx-safe-eval:
+  tsx-safe-eval@1.1.1:
     dependencies:
       i-want-to-go-home: 0.1.0
       normalize-path: 3.0.0

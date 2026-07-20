@@ -74,7 +74,15 @@ export class DSLEvaluator {
         }
       }
     } catch (e: any) {
-      errors.push(e.message || String(e));
+      const msg = e.message || String(e);
+      if (msg.startsWith('Unsupported syntax kind:')) {
+        errors.push(
+          `DSL parse error: unsupported syntax "${msg.replace('Unsupported syntax kind: ', '')}". ` +
+          `This may be a known syntax that is not yet supported by the evaluator.`
+        );
+      } else {
+        errors.push(msg);
+      }
     }
 
     return { parameters, features, mesh: resultMesh, graph, errors };

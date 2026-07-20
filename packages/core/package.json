@@ -16,7 +16,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "tsx-safe-eval": "file:../../vendor/tsx-safe-eval",
+    "tsx-safe-eval": "^1.1.1",
     "ts-morph": "^25.0.0"
   },
   "devDependencies": {

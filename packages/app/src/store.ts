@@ -146,9 +146,9 @@ function handleResult(
 
 // Helper: update a parameter value in DSL string
 function updateDslParameter(dsl: string, name: string, value: any): string {
-  // Match <Parameter name="xxx" value={yyy} ... />
+  // Match: const name = value;
   const regex = new RegExp(
-    `(<Parameter\\s+name=["']${escapeRegex(name)}["']\\s+value=\\{)([^}]*)(\\})`,
+    `(const\\s+${escapeRegex(name)}\\s*=\\s*)([^;]+)(;)`,
     'g'
   );
 

@@ -3,7 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "postinstall": "node scripts/setup-vendor.mjs",
     "dev": "concurrently -n api,app -c blue,green \"pnpm dev:api\" \"pnpm dev:app\"",
     "dev:app": "pnpm --filter @meshnative/app dev",
     "dev:api": "pnpm --filter @meshnative/app dev:api",

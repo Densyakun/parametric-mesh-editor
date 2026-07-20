@@ -6,9 +6,6 @@ dist/
 .env.local
 .env.*.local
 
-# Vendor (external repos)
-vendor/
-
 # OS
 .DS_Store
 Thumbs.db
