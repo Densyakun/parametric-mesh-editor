@@ -4,17 +4,10 @@ import { create } from 'zustand';
 import { DSLEvaluator, type DSLResult, type EvaluatedFeature } from '@meshnative/core';
 import type { ParameterDef, MeshData, GraphNode } from '@meshnative/core';
 
-const DEFAULT_DSL = `<Model>
-  <Parameter name="width" value={10} displayName="Width" />
-  <Parameter name="height" value={10} displayName="Height" />
-  <Parameter name="depth" value={10} displayName="Depth" />
-
-  <Box
-    width={width}
-    height={height}
-    depth={depth}
-  />
-</Model>`;
+const DEFAULT_DSL = `const width = 10;
+const height = 10;
+const depth = 10;
+<Box width={width} height={height} depth={depth} />`;
 
 export interface AppState {
   // DSL

@@ -30,18 +30,10 @@ export interface EvaluatedFeature {
   result: EvaluationResult | null;
 }
 
-// Default DSL template
-const DEFAULT_DSL = `<Model>
-  <Parameter name="width" value={10} />
-  <Parameter name="height" value={10} />
-  <Parameter name="depth" value={10} />
-
-  <Box
-    width={width}
-    height={height}
-    depth={depth}
-  />
-</Model>`;
+const DEFAULT_DSL = `const width = 10;
+const height = 10;
+const depth = 10;
+<Box width={width} height={height} depth={depth} />`;
 
 export class DSLEvaluator {
   private project: Project;
@@ -50,9 +42,9 @@ export class DSLEvaluator {
     this.project = new Project({
       useInMemoryFileSystem: true,
       compilerOptions: {
-        jsx: 4, // JsxEmit.ReactJSX
-        target: 99, // ScriptTarget.ESNext
-        module: 99, // ModuleKind.ESNext
+        jsx: 4,
+        target: 99,
+        module: 99,
       },
     });
   }
@@ -65,36 +57,30 @@ export class DSLEvaluator {
     const graph = new DependencyGraph();
 
     try {
-      // Pre-pass: extract Parameter values for variable injection
-      const paramValues: Record<string, any> = {};
-      const paramRegex = /<Parameter\s+name=["'](\w+)["']\s+value=\{([^}]+)\}/g;
-      let match;
-      while ((match = paramRegex.exec(dsl)) !== null) {
-        const name = match[1];
-        let value: any;
-        try {
-          value = JSON.parse(match[2]);
-        } catch {
-          value = Number(match[2]) || match[2];
-        }
-        paramValues[name] = value;
-      }
-
-      // Create source file
+      // Step 1: Compile TSX to plain JS using ts-morph emit
       const sourceFile = this.project.createSourceFile('model.tsx', dsl, { overwrite: true });
+      const outputFiles = sourceFile.getEmitOutput().getOutputFiles();
+      const compiledJS = outputFiles.length > 0 ? outputFiles[0].getText() : dsl;
 
-      // Compile to JSON AST
-      const sourceFileJson = compileSourceFileToJSON(sourceFile);
+      // Step 2: Parse the compiled JS with tsx-safe-eval
+      // Recreate as .ts file so ts-morph parses it as JS (not TSX)
+      const jsFile = this.project.createSourceFile('model.js', compiledJS, { overwrite: true });
+      const sourceFileJson = compileSourceFileToJSON(jsFile);
 
-      // Create scope with built-in components AND parameter variables
+      // Step 3: Build scope with built-in components
       const scope = this.createBuiltinScope(parameters, features, graph);
-      for (const [key, value] of Object.entries(paramValues)) {
-        scope[key] = value;
-      }
+
+      // _jsx is the automatic JSX runtime function - route it to our component scope
+      scope['_jsx'] = (component: any, props: any) => {
+        if (typeof component === 'function') {
+          return component(props ?? {});
+        }
+        return null;
+      };
 
       const variables: any[] = [scope];
 
-      // Evaluate the AST
+      // Step 4: Evaluate
       evalSyntaxList(sourceFileJson.syntaxList, variables, (moduleName: string) => {
         return { isInitializing: false, exports: { object: {} } };
       });
@@ -120,36 +106,12 @@ export class DSLEvaluator {
   ): Record<string, any> {
     const scope: Record<string, any> = {};
 
-    // Model component - root
-    scope['Model'] = (props: any) => {
-      // Model just renders its children
-      return props.children;
-    };
-
-    // Parameter component
-    scope['Parameter'] = (props: any) => {
-      const param: ParameterDef = {
-        name: props.name,
-        value: props.value,
-        type: typeof props.value === 'number' ? 'number' : typeof props.value === 'boolean' ? 'boolean' : 'string',
-        min: props.min,
-        max: props.max,
-        step: props.step,
-        displayName: props.displayName,
-      };
-      parameters.push(param);
-
-      // Store in outer scope for variable access
-      return null;
-    };
-
-    // Register all standard features
+    // Register all standard features as callable components
     const allFeatures = getAllFeatures();
     for (const feature of allFeatures) {
-      scope[feature.name] = this.createFeatureComponent(feature, features, graph);
+      scope[feature.name] = this.createFeatureComponent(feature, features, parameters, graph);
     }
 
-    // Also register common aliases
     scope['Cube'] = scope['Box'];
 
     return scope;
@@ -158,12 +120,10 @@ export class DSLEvaluator {
   private createFeatureComponent(
     featureConfig: any,
     features: EvaluatedFeature[],
+    parameters: ParameterDef[],
     graph: DependencyGraph
   ) {
     return (props: any) => {
-      const startTime = performance.now();
-
-      // Extract parameters (exclude special props like 'children', 'id')
       const params: Record<string, any> = {};
       for (const [key, value] of Object.entries(props)) {
         if (key !== 'children' && key !== 'id' && key !== 'ref') {
@@ -171,7 +131,24 @@ export class DSLEvaluator {
         }
       }
 
-      // Create evaluation context
+      // Check if this feature has Parameter-style params
+      if (featureConfig.schema.parameters.length > 0) {
+        for (const paramDef of featureConfig.schema.parameters) {
+          if (!(paramDef.name in params)) {
+            params[paramDef.name] = paramDef.value;
+          }
+          parameters.push({
+            name: paramDef.name,
+            value: params[paramDef.name],
+            type: paramDef.type,
+            min: paramDef.min,
+            max: paramDef.max,
+            step: paramDef.step,
+            displayName: paramDef.displayName,
+          });
+        }
+      }
+
       const context: EvaluationContext = {
         parameters: new Map(Object.entries(params)),
         inputs: new Map(),
@@ -180,7 +157,6 @@ export class DSLEvaluator {
         createMesh: (data: MeshData) => data,
       };
 
-      // Evaluate feature
       let result: EvaluationResult | null = null;
       let mesh: MeshData | null = null;
 
@@ -202,7 +178,6 @@ export class DSLEvaluator {
       };
       features.push(feature);
 
-      // Add to graph
       const node: GraphNode = {
         id,
         type: featureConfig.name,
@@ -218,7 +193,6 @@ export class DSLEvaluator {
     };
   }
 
-  // Get AI metadata for all features
   getAIMetadata(): Array<{ name: string; summary: string; parameters: Record<string, string> }> {
     return getAllFeatures().map(f => ({
       name: f.name,
@@ -229,7 +203,6 @@ export class DSLEvaluator {
     }));
   }
 
-  // Get feature schema
   getFeatureSchema(name: string): FeatureSchema | undefined {
     return getFeature(name)?.schema;
   }
