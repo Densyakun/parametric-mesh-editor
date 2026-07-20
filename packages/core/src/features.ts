@@ -42,6 +42,17 @@ function meshVertexCount(m: MeshData): number {
   return m.vertexPositions.length / 3;
 }
 
+function extractIndices(mesh: MeshData): number[] {
+  const indices: number[] = [];
+  for (let f = 0; f < mesh.faces.firstHalfEdge.length; f++) {
+    const he = mesh.faces.firstHalfEdge[f];
+    indices.push(mesh.halfEdges.origin[he]);
+    indices.push(mesh.halfEdges.origin[mesh.halfEdges.next[he]]);
+    indices.push(mesh.halfEdges.origin[mesh.halfEdges.next[mesh.halfEdges.next[he]]]);
+  }
+  return indices;
+}
+
 // ============================================================
 // Standard Features
 // ============================================================
@@ -202,6 +213,7 @@ registerFeature({
       { name: 'meshB', type: 'mesh', required: true },
     ],
     outputs: [{ name: 'mesh', type: 'mesh' }],
+    summary: 'Subtracts meshB from meshA (placeholder - returns meshA)',
   },
   evaluate: (ctx: EvaluationContext): EvaluationResult => {
     const meshA = ctx.inputs.get('meshA') as MeshData;
@@ -213,6 +225,259 @@ registerFeature({
       outputs: new Map([['mesh', meshA]]),
       mesh: meshA,
       metadata: { evaluationTime: 0, polygonCount: meshFaceCount(meshA), vertexCount: meshVertexCount(meshA) },
+    };
+  },
+});
+
+registerFeature({
+  name: 'Intersection',
+  version: '1.0.0',
+  category: 'boolean',
+  schema: {
+    name: 'Intersection',
+    category: 'boolean',
+    parameters: [],
+    inputs: [
+      { name: 'meshA', type: 'mesh', required: true },
+      { name: 'meshB', type: 'mesh', required: true },
+    ],
+    outputs: [{ name: 'mesh', type: 'mesh' }],
+    summary: 'Computes the intersection of meshA and meshB (placeholder - returns meshA)',
+  },
+  evaluate: (ctx: EvaluationContext): EvaluationResult => {
+    const meshA = ctx.inputs.get('meshA') as MeshData;
+    const meshB = ctx.inputs.get('meshB') as MeshData;
+    if (!meshA || !meshB) {
+      return { outputs: new Map(), metadata: { evaluationTime: 0, polygonCount: 0, vertexCount: 0 } };
+    }
+    // Placeholder: return meshA (real boolean needs CGAL/CGEOM)
+    return {
+      outputs: new Map([['mesh', meshA]]),
+      mesh: meshA,
+      metadata: { evaluationTime: 0, polygonCount: meshFaceCount(meshA), vertexCount: meshVertexCount(meshA) },
+    };
+  },
+});
+
+// --- Group ---
+
+registerFeature({
+  name: 'Cone',
+  version: '1.0.0',
+  category: 'primitive',
+  schema: {
+    name: 'Cone',
+    category: 'primitive',
+    parameters: [
+      { name: 'radius', value: 5, type: 'number', min: 0.01, displayName: 'Radius' },
+      { name: 'height', value: 10, type: 'number', min: 0.01, displayName: 'Height' },
+      { name: 'segments', value: 32, type: 'number', min: 3, max: 256, displayName: 'Segments' },
+    ],
+    inputs: [],
+    outputs: [{ name: 'mesh', type: 'mesh' }],
+  },
+  evaluate: (ctx: EvaluationContext): EvaluationResult => {
+    const radius = ctx.parameters.get('radius') ?? 5;
+    const height = ctx.parameters.get('height') ?? 10;
+    const segments = ctx.parameters.get('segments') ?? 32;
+    const mesh = toMeshData(HalfEdgeMesh.createCone(radius, height, segments));
+    return {
+      outputs: new Map([['mesh', mesh]]),
+      mesh,
+      metadata: { evaluationTime: 0, polygonCount: meshFaceCount(mesh), vertexCount: meshVertexCount(mesh) },
+    };
+  },
+});
+
+registerFeature({
+  name: 'Torus',
+  version: '1.0.0',
+  category: 'primitive',
+  schema: {
+    name: 'Torus',
+    category: 'primitive',
+    parameters: [
+      { name: 'radius', value: 5, type: 'number', min: 0.01, displayName: 'Radius' },
+      { name: 'tube', value: 2, type: 'number', min: 0.01, displayName: 'Tube Radius' },
+      { name: 'radialSegments', value: 32, type: 'number', min: 3, max: 256, displayName: 'Radial Segments' },
+      { name: 'tubularSegments', value: 16, type: 'number', min: 3, max: 128, displayName: 'Tubular Segments' },
+    ],
+    inputs: [],
+    outputs: [{ name: 'mesh', type: 'mesh' }],
+  },
+  evaluate: (ctx: EvaluationContext): EvaluationResult => {
+    const radius = ctx.parameters.get('radius') ?? 5;
+    const tube = ctx.parameters.get('tube') ?? 2;
+    const radialSegments = ctx.parameters.get('radialSegments') ?? 32;
+    const tubularSegments = ctx.parameters.get('tubularSegments') ?? 16;
+    const mesh = toMeshData(HalfEdgeMesh.createTorus(radius, tube, radialSegments, tubularSegments));
+    return {
+      outputs: new Map([['mesh', mesh]]),
+      mesh,
+      metadata: { evaluationTime: 0, polygonCount: meshFaceCount(mesh), vertexCount: meshVertexCount(mesh) },
+    };
+  },
+});
+
+// --- Sketch ---
+
+registerFeature({
+  name: 'Rectangle',
+  version: '1.0.0',
+  category: 'sketch',
+  schema: {
+    name: 'Rectangle',
+    category: 'sketch',
+    parameters: [
+      { name: 'width', value: 10, type: 'number', min: 0.01, displayName: 'Width' },
+      { name: 'height', value: 10, type: 'number', min: 0.01, displayName: 'Height' },
+    ],
+    inputs: [],
+    outputs: [{ name: 'mesh', type: 'mesh' }],
+    summary: 'Creates a 2D rectangle sketch profile',
+  },
+  evaluate: (ctx: EvaluationContext): EvaluationResult => {
+    const width = ctx.parameters.get('width') ?? 10;
+    const height = ctx.parameters.get('height') ?? 10;
+    const mesh = toMeshData(HalfEdgeMesh.createRectangle(width, height));
+    return {
+      outputs: new Map([['mesh', mesh]]),
+      mesh,
+      metadata: { evaluationTime: 0, polygonCount: meshFaceCount(mesh), vertexCount: meshVertexCount(mesh) },
+    };
+  },
+});
+
+registerFeature({
+  name: 'Circle',
+  version: '1.0.0',
+  category: 'sketch',
+  schema: {
+    name: 'Circle',
+    category: 'sketch',
+    parameters: [
+      { name: 'radius', value: 5, type: 'number', min: 0.01, displayName: 'Radius' },
+      { name: 'segments', value: 32, type: 'number', min: 3, max: 256, displayName: 'Segments' },
+    ],
+    inputs: [],
+    outputs: [{ name: 'mesh', type: 'mesh' }],
+    summary: 'Creates a 2D circle sketch profile',
+  },
+  evaluate: (ctx: EvaluationContext): EvaluationResult => {
+    const radius = ctx.parameters.get('radius') ?? 5;
+    const segments = ctx.parameters.get('segments') ?? 32;
+    const mesh = toMeshData(HalfEdgeMesh.createCircle(radius, segments));
+    return {
+      outputs: new Map([['mesh', mesh]]),
+      mesh,
+      metadata: { evaluationTime: 0, polygonCount: meshFaceCount(mesh), vertexCount: meshVertexCount(mesh) },
+    };
+  },
+});
+
+// --- Transform ---
+
+registerFeature({
+  name: 'Extrude',
+  version: '1.0.0',
+  category: 'transform',
+  schema: {
+    name: 'Extrude',
+    category: 'transform',
+    parameters: [
+      { name: 'distance', value: 10, type: 'number', displayName: 'Distance' },
+      { name: 'width', value: 10, type: 'number', min: 0.01, displayName: 'Profile Width' },
+      { name: 'height', value: 10, type: 'number', min: 0.01, displayName: 'Profile Height' },
+    ],
+    inputs: [
+      { name: 'mesh', type: 'mesh', required: false },
+    ],
+    outputs: [{ name: 'mesh', type: 'mesh' }],
+    summary: 'Extrudes a 2D profile along the Y axis to create a 3D shape. Provide mesh input or use width/height for rectangular profile.',
+  },
+  evaluate: (ctx: EvaluationContext): EvaluationResult => {
+    const distance = ctx.parameters.get('distance') ?? 10;
+    const rawMesh = ctx.parameters.get('mesh') ?? ctx.inputs.get('mesh');
+
+    let profileMesh: HalfEdgeMesh;
+    if (rawMesh && typeof rawMesh === 'object') {
+      const meshData: MeshData | undefined = rawMesh.mesh ?? (rawMesh.vertexPositions ? rawMesh : undefined);
+      if (meshData && meshData.vertexPositions) {
+        const indices = extractIndices(meshData);
+        profileMesh = HalfEdgeMesh.fromIndexedTriangles(
+          new Float32Array(meshData.vertexPositions),
+          new Uint32Array(indices)
+        );
+      } else {
+        const width = ctx.parameters.get('width') ?? 10;
+        const height = ctx.parameters.get('height') ?? 10;
+        profileMesh = HalfEdgeMesh.createRectangle(width, height);
+      }
+    } else {
+      const width = ctx.parameters.get('width') ?? 10;
+      const height = ctx.parameters.get('height') ?? 10;
+      profileMesh = HalfEdgeMesh.createRectangle(width, height);
+    }
+
+    const mesh = toMeshData(HalfEdgeMesh.extrudeMesh(profileMesh, distance));
+    return {
+      outputs: new Map([['mesh', mesh]]),
+      mesh,
+      metadata: { evaluationTime: 0, polygonCount: meshFaceCount(mesh), vertexCount: meshVertexCount(mesh) },
+    };
+  },
+});
+
+registerFeature({
+  name: 'Revolve',
+  version: '1.0.0',
+  category: 'transform',
+  schema: {
+    name: 'Revolve',
+    category: 'transform',
+    parameters: [
+      { name: 'angle', value: 360, type: 'number', min: 1, max: 360, displayName: 'Angle (degrees)' },
+      { name: 'segments', value: 32, type: 'number', min: 3, max: 256, displayName: 'Segments' },
+      { name: 'width', value: 5, type: 'number', min: 0.01, displayName: 'Profile Width' },
+      { name: 'height', value: 10, type: 'number', min: 0.01, displayName: 'Profile Height' },
+    ],
+    inputs: [
+      { name: 'mesh', type: 'mesh', required: false },
+    ],
+    outputs: [{ name: 'mesh', type: 'mesh' }],
+    summary: 'Revolves a 2D profile around the Y axis. Provide mesh input or use width/height for rectangular profile.',
+  },
+  evaluate: (ctx: EvaluationContext): EvaluationResult => {
+    const angleDeg = ctx.parameters.get('angle') ?? 360;
+    const segments = ctx.parameters.get('segments') ?? 32;
+    const rawMesh = ctx.parameters.get('mesh') ?? ctx.inputs.get('mesh');
+
+    let profileMesh: HalfEdgeMesh;
+    if (rawMesh && typeof rawMesh === 'object') {
+      const meshData: MeshData | undefined = rawMesh.mesh ?? (rawMesh.vertexPositions ? rawMesh : undefined);
+      if (meshData && meshData.vertexPositions) {
+        const indices = extractIndices(meshData);
+        profileMesh = HalfEdgeMesh.fromIndexedTriangles(
+          new Float32Array(meshData.vertexPositions),
+          new Uint32Array(indices)
+        );
+      } else {
+        const width = ctx.parameters.get('width') ?? 5;
+        const height = ctx.parameters.get('height') ?? 10;
+        profileMesh = HalfEdgeMesh.createRectangle(width, height);
+      }
+    } else {
+      const width = ctx.parameters.get('width') ?? 5;
+      const height = ctx.parameters.get('height') ?? 10;
+      profileMesh = HalfEdgeMesh.createRectangle(width, height);
+    }
+
+    const angle = (angleDeg / 360) * Math.PI * 2;
+    const mesh = toMeshData(HalfEdgeMesh.revolveMesh(profileMesh, angle, segments));
+    return {
+      outputs: new Map([['mesh', mesh]]),
+      mesh,
+      metadata: { evaluationTime: 0, polygonCount: meshFaceCount(mesh), vertexCount: meshVertexCount(mesh) },
     };
   },
 });

@@ -451,6 +451,240 @@ export class HalfEdgeMesh {
     return mesh;
   }
 
+  static createCone(radius: number, height: number, segments: number = 32): HalfEdgeMesh {
+    const positions: number[] = [];
+    const indices: number[] = [];
+    const halfHeight = height / 2;
+
+    // Apex vertex
+    positions.push(0, halfHeight, 0);
+    const apex = 0;
+
+    // Bottom rim vertices
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      positions.push(
+        radius * Math.cos(theta),
+        -halfHeight,
+        radius * Math.sin(theta)
+      );
+    }
+
+    // Side faces (CCW winding for outward normals)
+    for (let i = 0; i < segments; i++) {
+      indices.push(apex, 1 + i + 1, 1 + i);
+    }
+
+    // Bottom cap center
+    const bottomCenter = positions.length / 3;
+    positions.push(0, -halfHeight, 0);
+
+    // Bottom cap vertices (duplicate rim)
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      positions.push(
+        radius * Math.cos(theta),
+        -halfHeight,
+        radius * Math.sin(theta)
+      );
+    }
+
+    // Bottom cap faces (CCW winding for outward -y normal)
+    for (let i = 0; i < segments; i++) {
+      indices.push(bottomCenter, bottomCenter + 1 + i, bottomCenter + 2 + i);
+    }
+
+    return HalfEdgeMesh.fromIndexedTriangles(
+      new Float32Array(positions),
+      new Uint32Array(indices)
+    );
+  }
+
+  static createTorus(radius: number, tube: number, radialSegments: number = 32, tubularSegments: number = 16): HalfEdgeMesh {
+    const positions: number[] = [];
+    const indices: number[] = [];
+
+    for (let i = 0; i <= radialSegments; i++) {
+      const u = (i / radialSegments) * Math.PI * 2;
+      for (let j = 0; j <= tubularSegments; j++) {
+        const v = (j / tubularSegments) * Math.PI * 2;
+        const x = (radius + tube * Math.cos(v)) * Math.cos(u);
+        const y = (radius + tube * Math.cos(v)) * Math.sin(u);
+        const z = tube * Math.sin(v);
+        positions.push(x, y, z);
+      }
+    }
+
+    for (let i = 0; i < radialSegments; i++) {
+      for (let j = 0; j < tubularSegments; j++) {
+        const a = i * (tubularSegments + 1) + j;
+        const b = a + tubularSegments + 1;
+        const c = a + 1;
+        const d = b + 1;
+        indices.push(a, c, b);
+        indices.push(c, d, b);
+      }
+    }
+
+    return HalfEdgeMesh.fromIndexedTriangles(
+      new Float32Array(positions),
+      new Uint32Array(indices)
+    );
+  }
+
+  static createRectangle(width: number, height: number): HalfEdgeMesh {
+    const w = width / 2;
+    const h = height / 2;
+    const positions = new Float32Array([
+      -w, 0, -h,
+       w, 0, -h,
+       w, 0,  h,
+      -w, 0,  h,
+    ]);
+    const indices = new Uint32Array([0, 2, 1, 0, 3, 2]);
+    return HalfEdgeMesh.fromIndexedTriangles(positions, indices);
+  }
+
+  static createCircle(radius: number, segments: number = 32): HalfEdgeMesh {
+    const positions: number[] = [0, 0, 0];
+    const indices: number[] = [];
+
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      positions.push(radius * Math.cos(theta), 0, radius * Math.sin(theta));
+    }
+
+    for (let i = 0; i < segments; i++) {
+      indices.push(0, i + 2, i + 1);
+    }
+
+    return HalfEdgeMesh.fromIndexedTriangles(
+      new Float32Array(positions),
+      new Uint32Array(indices)
+    );
+  }
+
+  static extrudeMesh(profile: HalfEdgeMesh, distance: number): HalfEdgeMesh {
+    const profileData = profile.getData();
+    const profilePositions = profileData.vertexPositions;
+    const profileIndices = profile.getIndices();
+    const profileVertexCount = profilePositions.length / 3;
+
+    const totalVertices = profileVertexCount * 2;
+    const totalTriangles = profileIndices.length + profileIndices.length + (profileVertexCount - 2) * 2;
+    const positions = new Float32Array(totalVertices * 3);
+    const indices: number[] = [];
+
+    for (let i = 0; i < profileVertexCount; i++) {
+      positions[i * 3] = profilePositions[i * 3];
+      positions[i * 3 + 1] = profilePositions[i * 3 + 1];
+      positions[i * 3 + 2] = profilePositions[i * 3 + 2];
+    }
+
+    for (let i = 0; i < profileVertexCount; i++) {
+      const j = profileVertexCount + i;
+      positions[j * 3] = profilePositions[i * 3];
+      positions[j * 3 + 1] = profilePositions[i * 3 + 1] + distance;
+      positions[j * 3 + 2] = profilePositions[i * 3 + 2];
+    }
+
+    for (let i = 0; i < profileIndices.length; i += 3) {
+      indices.push(profileIndices[i], profileIndices[i + 1], profileIndices[i + 2]);
+    }
+
+    for (let i = 0; i < profileIndices.length; i += 3) {
+      const a = profileIndices[i] + profileVertexCount;
+      const b = profileIndices[i + 1] + profileVertexCount;
+      const c = profileIndices[i + 2] + profileVertexCount;
+      indices.push(a, c, b);
+    }
+
+    const sortedProfile = [...new Set(profileIndices)].sort((a, b) => a - b);
+    for (let k = 0; k < sortedProfile.length - 1; k++) {
+      const i = sortedProfile[k];
+      const j = sortedProfile[k + 1];
+      const iTop = i + profileVertexCount;
+      const jTop = j + profileVertexCount;
+      indices.push(i, j, jTop);
+      indices.push(i, jTop, iTop);
+    }
+
+    return HalfEdgeMesh.fromIndexedTriangles(
+      positions,
+      new Uint32Array(indices)
+    );
+  }
+
+  static revolveMesh(profile: HalfEdgeMesh, angle: number = Math.PI * 2, segments: number = 32): HalfEdgeMesh {
+    const profileData = profile.getData();
+    const profilePositions = profileData.vertexPositions;
+    const profileIndices = profile.getIndices();
+    const profileVertexCount = profilePositions.length / 3;
+
+    const positions: number[] = [];
+    const indices: number[] = [];
+
+    for (let s = 0; s <= segments; s++) {
+      const theta = (s / segments) * angle;
+      const cosT = Math.cos(theta);
+      const sinT = Math.sin(theta);
+
+      for (let v = 0; v < profileVertexCount; v++) {
+        const x = profilePositions[v * 3];
+        const y = profilePositions[v * 3 + 1];
+        const z = profilePositions[v * 3 + 2];
+        const newX = x * cosT - z * sinT;
+        const newZ = x * sinT + z * cosT;
+        positions.push(newX, y, newZ);
+      }
+    }
+
+    for (let s = 0; s < segments; s++) {
+      for (let v = 0; v < profileIndices.length; v += 3) {
+        const i0 = profileIndices[v];
+        const i1 = profileIndices[v + 1];
+        const i2 = profileIndices[v + 2];
+
+        const a0 = s * profileVertexCount + i0;
+        const a1 = s * profileVertexCount + i1;
+        const a2 = s * profileVertexCount + i2;
+
+        const b0 = (s + 1) * profileVertexCount + i0;
+        const b1 = (s + 1) * profileVertexCount + i1;
+        const b2 = (s + 1) * profileVertexCount + i2;
+
+        indices.push(a0, a1, b1);
+        indices.push(a0, b1, b0);
+
+        indices.push(a1, a2, b2);
+        indices.push(a1, b2, b1);
+
+        indices.push(a2, a0, b0);
+        indices.push(a2, b0, b2);
+      }
+    }
+
+    if (angle >= Math.PI * 2 - 0.001) {
+      const sortedProfile = [...new Set(profileIndices)].sort((a, b) => a - b);
+      for (let k = 0; k < sortedProfile.length - 1; k++) {
+        const i = sortedProfile[k];
+        const j = sortedProfile[k + 1];
+        indices.push(i, j, j + profileVertexCount);
+        indices.push(i, j + profileVertexCount, i + profileVertexCount);
+
+        const iEnd = segments * profileVertexCount + i;
+        const jEnd = segments * profileVertexCount + j;
+        indices.push(jEnd, iEnd, iEnd - profileVertexCount);
+        indices.push(jEnd, iEnd - profileVertexCount, jEnd - profileVertexCount);
+      }
+    }
+
+    return HalfEdgeMesh.fromIndexedTriangles(
+      new Float32Array(positions),
+      new Uint32Array(indices)
+    );
+  }
+
   transform(matrix: number[]): HalfEdgeMesh {
     const mesh = this.clone();
     const pos = mesh.data.vertexPositions;
