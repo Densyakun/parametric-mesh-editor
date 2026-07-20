@@ -1,6 +1,6 @@
 // Header/Toolbar component
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuth } from '../lib/auth';
 import { AuthButton } from './Auth';
@@ -20,6 +20,7 @@ export function Header() {
   const [saving, setSaving] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = async () => {
     if (!user) return;
@@ -39,6 +40,39 @@ export function Header() {
     }
 
     setSaving(false);
+  };
+
+  const handleDownload = () => {
+    const blob = new Blob([dsl], { type: 'text/typescript' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectName || 'model'}.tsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        useAppStore.getState().setDsl(content);
+        const name = file.name.replace(/\.tsx?$/, '');
+        useAppStore.getState().projectName = name;
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const handleLoadProjects = async () => {
@@ -81,6 +115,15 @@ export function Header() {
           Redo
         </button>
         <span style={separatorStyle}>|</span>
+        <button onClick={handleDownload} style={buttonStyle} title="Download .tsx file">Download</button>
+        <button onClick={handleUpload} style={buttonStyle} title="Upload .tsx file">Upload</button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".tsx,.ts"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+        />
         {user && (
           <>
             <button onClick={handleSave} style={saveButtonStyle} disabled={saving}>
