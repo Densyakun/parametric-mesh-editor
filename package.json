@@ -1,0 +1,16 @@
+{
+  "name": "parametric-mesh-editor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run dev -w packages/app",
+    "build": "npm run build -w packages/core && npm run build -w packages/app",
+    "lint": "npm run lint -w packages/core && npm run lint -w packages/app"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  }
+}

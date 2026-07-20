@@ -1,0 +1,33 @@
+node_modules/
+dist/
+.vite/
+*.local
+.env.local
+.env.*.local
+
+# Vendor (external repos)
+vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build
+*.tsbuildinfo
+
+# pnpm
+.pnpm-store/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Supabase
+supabase/.temp/
