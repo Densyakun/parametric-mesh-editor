@@ -90,7 +90,7 @@ export function Header() {
         <input
           type="text"
           value={projectName}
-          onChange={(e) => useAppStore.getState().projectName = e.target.value}
+          onChange={(e) => useAppStore.setState({ projectName: e.target.value, isDirty: true })}
           style={projectNameStyle}
         />
         {isDirty && <span style={dirtyIndicatorStyle}>*</span>}
