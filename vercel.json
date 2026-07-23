@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "buildCommand": "tsc -p tsconfig.core.json && tsc --noEmit && vite build"
 }
