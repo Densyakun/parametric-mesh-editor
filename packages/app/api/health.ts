@@ -1,16 +1,14 @@
-import type { IncomingMessage, ServerResponse } from 'node:http';
-import { jsonResponse, corsHeaders } from './lib/utils';
+import { jsonResponse, corsResponse } from './lib/utils';
 
-export default function handler(req: IncomingMessage, res: ServerResponse) {
-  if (req.method === 'OPTIONS') {
-    corsHeaders(res);
-    res.writeHead(204);
-    res.end();
-    return;
-  }
+export default {
+  fetch(request: Request): Response {
+    if (request.method === 'OPTIONS') {
+      return corsResponse();
+    }
 
-  jsonResponse(res, 200, {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-  });
-}
+    return jsonResponse(200, {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+    });
+  },
+};

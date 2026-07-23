@@ -1,26 +1,22 @@
-import type { IncomingMessage, ServerResponse } from 'node:http';
-import { getEvaluator, validateApiKey, jsonResponse, corsHeaders } from '../lib/utils';
+import { getEvaluator, validateApiKey, jsonResponse, corsResponse } from '../lib/utils';
 
-export default function handler(req: IncomingMessage, res: ServerResponse) {
-  if (req.method === 'OPTIONS') {
-    corsHeaders(res);
-    res.writeHead(204);
-    res.end();
-    return;
-  }
+export default {
+  fetch(request: Request): Response {
+    if (request.method === 'OPTIONS') {
+      return corsResponse();
+    }
 
-  if (req.method !== 'GET') {
-    jsonResponse(res, 405, { error: 'Method not allowed' });
-    return;
-  }
+    if (request.method !== 'GET') {
+      return jsonResponse(405, { error: 'Method not allowed' });
+    }
 
-  const auth = validateApiKey(req.headers.authorization);
-  if (!auth.valid) {
-    jsonResponse(res, 401, { error: auth.error });
-    return;
-  }
+    const auth = validateApiKey(request.headers.get('authorization'));
+    if (!auth.valid) {
+      return jsonResponse(401, { error: auth.error });
+    }
 
-  const evaluator = getEvaluator();
-  const features = evaluator.getAIMetadata();
-  jsonResponse(res, 200, { features });
-}
+    const evaluator = getEvaluator();
+    const features = evaluator.getAIMetadata();
+    return jsonResponse(200, { features });
+  },
+};
