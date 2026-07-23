@@ -2,7 +2,7 @@ let evaluator: any = null;
 
 export async function getEvaluator(): Promise<any> {
   if (!evaluator) {
-    const mod = await import('../' + 'dist/core/index.js');
+    const mod = await import(process.cwd() + '/dist/core/index.js');
     evaluator = new mod.DSLEvaluator();
   }
   return evaluator;
