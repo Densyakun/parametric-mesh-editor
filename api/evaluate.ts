@@ -30,7 +30,7 @@ export default {
         success: result.errors.length === 0,
         errors: result.errors,
         parameters: result.parameters,
-        features: result.features.map(f => ({
+        features: result.features.map((f: any) => ({
           id: f.id,
           name: f.name,
           parameters: f.parameters,
