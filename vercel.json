@@ -1,4 +1,27 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "installCommand": "pnpm install && npx tsc -p tsconfig.core.json",
+  "functions": {
+    "api/features/index.ts": {
+      "runtime": "nodejs22.x",
+      "includeFiles": "dist/core/**"
+    },
+    "api/features/[name].ts": {
+      "runtime": "nodejs22.x",
+      "includeFiles": "dist/core/**"
+    },
+    "api/evaluate.ts": {
+      "runtime": "nodejs22.x",
+      "includeFiles": "dist/core/**"
+    },
+    "api/validate.ts": {
+      "runtime": "nodejs22.x",
+      "includeFiles": "dist/core/**"
+    },
+    "api/test-core.ts": {
+      "runtime": "nodejs22.x",
+      "includeFiles": "dist/core/**"
+    }
+  }
 }
