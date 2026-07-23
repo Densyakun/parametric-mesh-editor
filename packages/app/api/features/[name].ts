@@ -1,36 +1,40 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getEvaluator, validateApiKey, jsonResponse, corsHeaders } from '../lib/utils';
 
-export const config = {
-  runtime: 'edge',
-};
-
-export default async function handler(request: Request): Promise<Response> {
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders() });
+export default function handler(req: IncomingMessage, res: ServerResponse) {
+  if (req.method === 'OPTIONS') {
+    corsHeaders(res);
+    res.writeHead(204);
+    res.end();
+    return;
   }
 
-  if (request.method !== 'GET') {
-    return jsonResponse(405, { error: 'Method not allowed' });
+  if (req.method !== 'GET') {
+    jsonResponse(res, 405, { error: 'Method not allowed' });
+    return;
   }
 
-  const auth = validateApiKey(request.headers.get('authorization') ?? undefined);
+  const auth = validateApiKey(req.headers.authorization);
   if (!auth.valid) {
-    return jsonResponse(401, { error: auth.error });
+    jsonResponse(res, 401, { error: auth.error });
+    return;
   }
 
-  const url = new URL(request.url);
+  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   const name = url.pathname.split('/features/')[1];
-  
+
   if (!name) {
-    return jsonResponse(400, { error: 'Missing feature name' });
+    jsonResponse(res, 400, { error: 'Missing feature name' });
+    return;
   }
 
   const evaluator = getEvaluator();
   const schema = evaluator.getFeatureSchema(name);
-  
+
   if (!schema) {
-    return jsonResponse(404, { error: `Feature "${name}" not found` });
+    jsonResponse(res, 404, { error: `Feature "${name}" not found` });
+    return;
   }
 
-  return jsonResponse(200, { schema });
+  jsonResponse(res, 200, { schema });
 }

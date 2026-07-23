@@ -1,27 +1,39 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getEvaluator, validateApiKey, jsonResponse, corsHeaders, computeBoundingBox, getIndicesFromMesh } from './lib/utils';
 
-export const config = {
-  runtime: 'edge',
-};
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString()));
+    req.on('error', reject);
+  });
+}
 
-export default async function handler(request: Request): Promise<Response> {
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders() });
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
+  if (req.method === 'OPTIONS') {
+    corsHeaders(res);
+    res.writeHead(204);
+    res.end();
+    return;
   }
 
-  if (request.method !== 'POST') {
-    return jsonResponse(405, { error: 'Method not allowed' });
+  if (req.method !== 'POST') {
+    jsonResponse(res, 405, { error: 'Method not allowed' });
+    return;
   }
 
-  const auth = validateApiKey(request.headers.get('authorization') ?? undefined);
+  const auth = validateApiKey(req.headers.authorization);
   if (!auth.valid) {
-    return jsonResponse(401, { error: auth.error });
+    jsonResponse(res, 401, { error: auth.error });
+    return;
   }
 
   try {
-    const body = await request.json();
+    const body = JSON.parse(await readBody(req));
     if (!body?.dsl) {
-      return jsonResponse(400, { error: 'Missing "dsl" field in request body' });
+      jsonResponse(res, 400, { error: 'Missing "dsl" field in request body' });
+      return;
     }
 
     const evaluator = getEvaluator();
@@ -29,7 +41,7 @@ export default async function handler(request: Request): Promise<Response> {
     const result = evaluator.evaluate(body.dsl);
     const evaluationTime = performance.now() - startTime;
 
-    return jsonResponse(200, {
+    jsonResponse(res, 200, {
       success: result.errors.length === 0,
       errors: result.errors,
       parameters: result.parameters,
@@ -53,6 +65,6 @@ export default async function handler(request: Request): Promise<Response> {
       evaluationTime: Math.round(evaluationTime * 100) / 100,
     });
   } catch (e: any) {
-    return jsonResponse(500, { error: e.message || 'Internal server error' });
+    jsonResponse(res, 500, { error: e.message || 'Internal server error' });
   }
 }

@@ -1,15 +1,15 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { jsonResponse, corsHeaders } from './lib/utils';
 
-export const config = {
-  runtime: 'edge',
-};
-
-export default async function handler(request: Request): Promise<Response> {
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders() });
+export default function handler(req: IncomingMessage, res: ServerResponse) {
+  if (req.method === 'OPTIONS') {
+    corsHeaders(res);
+    res.writeHead(204);
+    res.end();
+    return;
   }
 
-  return jsonResponse(200, {
+  jsonResponse(res, 200, {
     status: 'ok',
     timestamp: new Date().toISOString(),
   });

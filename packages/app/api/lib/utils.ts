@@ -1,3 +1,4 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { DSLEvaluator } from '@meshnative/core';
 
 let evaluator: DSLEvaluator | null = null;
@@ -11,34 +12,28 @@ export function getEvaluator(): DSLEvaluator {
 
 export function validateApiKey(authHeader: string | undefined): { valid: boolean; error?: string } {
   const apiKey = authHeader?.replace('Bearer ', '');
-  
+
   if (!apiKey) {
     return { valid: false, error: 'API key required. Pass it as Authorization: Bearer <key>' };
   }
-  
+
   if (!apiKey.startsWith('mna_')) {
     return { valid: false, error: 'Invalid API key format' };
   }
-  
+
   return { valid: true };
 }
 
-export function corsHeaders(): HeadersInit {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
+export function corsHeaders(res: ServerResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
-export function jsonResponse(status: number, data: any): Response {
-  return new Response(JSON.stringify(data, null, 2), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      ...corsHeaders(),
-    },
-  });
+export function jsonResponse(res: ServerResponse, status: number, data: any) {
+  corsHeaders(res);
+  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(data, null, 2));
 }
 
 export function computeBoundingBox(positions: Float32Array): { min: number[]; max: number[] } {

@@ -1,14 +1,6 @@
 {
-  "version": 2,
-  "buildCommand": "pnpm build",
-  "outputDirectory": "packages/app/dist",
-  "installCommand": "pnpm install",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    }
-  ]
+  "outputDirectory": "dist",
+  "buildCommand": "pnpm --filter @meshnative/core build && pnpm --filter @meshnative/app build"
 }
