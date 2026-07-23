@@ -4,16 +4,16 @@
   "installCommand": "pnpm install && npx tsc -p tsconfig.core.json",
   "functions": {
     "api/features/index.ts": {
-      "includeFiles": "dist/core/**"
+      "includeFiles": ["src/core/**"]
     },
     "api/features/[name].ts": {
-      "includeFiles": "dist/core/**"
+      "includeFiles": ["src/core/**"]
     },
     "api/evaluate.ts": {
-      "includeFiles": "dist/core/**"
+      "includeFiles": ["src/core/**"]
     },
     "api/validate.ts": {
-      "includeFiles": "dist/core/**"
+      "includeFiles": ["src/core/**"]
     }
   }
 }

@@ -1,4 +1,4 @@
-import { DSLEvaluator } from '../../dist/core/index.js';
+import { DSLEvaluator } from '../../src/core/index.ts';
 
 let evaluator: any = null;
 
