@@ -1,7 +1,7 @@
 import { getEvaluator, validateApiKey, jsonResponse, corsResponse } from '../lib/utils';
 
 export default {
-  fetch(request: Request): Response {
+  async fetch(request: Request): Promise<Response> {
     if (request.method === 'OPTIONS') {
       return corsResponse();
     }
@@ -15,7 +15,7 @@ export default {
       return jsonResponse(401, { error: auth.error });
     }
 
-    const evaluator = getEvaluator();
+    const evaluator = await getEvaluator();
     const features = evaluator.getAIMetadata();
     return jsonResponse(200, { features });
   },

@@ -21,7 +21,7 @@ export default {
         return jsonResponse(400, { error: 'Missing "dsl" field in request body' });
       }
 
-      const evaluator = getEvaluator();
+      const evaluator = await getEvaluator();
       const result = await evaluator.evaluate(body.dsl);
 
       return jsonResponse(200, {

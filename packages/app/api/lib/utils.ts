@@ -1,9 +1,10 @@
-import { DSLEvaluator } from '@meshnative/core';
+let evaluator: any = null;
 
-let evaluator: DSLEvaluator | null = null;
-
-export function getEvaluator(): DSLEvaluator {
+export async function getEvaluator(): Promise<any> {
   if (!evaluator) {
+    // Vercelのesbuildが静的importをbundleしようとするのを防ぐため文字列連結で回避
+    const pkg = '@meshnative' + '/core';
+    const { DSLEvaluator } = await import(pkg);
     evaluator = new DSLEvaluator();
   }
   return evaluator;
@@ -31,6 +32,10 @@ const CORS_HEADERS: Record<string, string> = {
 
 export function corsResponse(): Response {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
+export function corsHeaders(): Record<string, string> {
+  return { ...CORS_HEADERS };
 }
 
 export function jsonResponse(status: number, data: unknown): Response {

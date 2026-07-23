@@ -1,7 +1,7 @@
 import { getEvaluator, validateApiKey, jsonResponse, corsResponse } from '../lib/utils';
 
 export default {
-  fetch(request: Request): Response {
+  async fetch(request: Request): Promise<Response> {
     if (request.method === 'OPTIONS') {
       return corsResponse();
     }
@@ -22,7 +22,7 @@ export default {
       return jsonResponse(400, { error: 'Missing feature name' });
     }
 
-    const evaluator = getEvaluator();
+    const evaluator = await getEvaluator();
     const schema = evaluator.getFeatureSchema(name);
 
     if (!schema) {
