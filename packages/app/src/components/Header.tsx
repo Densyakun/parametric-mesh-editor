@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuth } from '../lib/auth';
 import { AuthButton } from './Auth';
-import { createProject, saveProjectDSL, listProjects } from '../lib/projects';
+import { createProject, saveProjectDSL, listProjects, deleteProject } from '../lib/projects';
 
 export function Header() {
   const { user } = useAuth();
@@ -82,6 +82,17 @@ export function Header() {
     setShowProjects(true);
   };
 
+  const handleDeleteProject = async (projectId: string, projectName: string) => {
+    if (!window.confirm(`「${projectName}」を削除しますか？この操作は取り消せません。`)) return;
+    const ok = await deleteProject(projectId);
+    if (ok) {
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      if (useAppStore.getState().projectId === projectId) {
+        resetToDefault();
+      }
+    }
+  };
+
   return (
     <div style={headerStyle}>
       <div style={leftStyle}>
@@ -154,16 +165,25 @@ export function Header() {
                       {new Date(p.updated_at).toLocaleDateString()}
                     </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      setProject(p.id, p.name);
-                      useAppStore.getState().setDsl(p.dsl);
-                      setShowProjects(false);
-                    }}
-                    style={loadButtonStyle}
-                  >
-                    Load
-                  </button>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      onClick={() => {
+                        setProject(p.id, p.name);
+                        useAppStore.getState().setDsl(p.dsl);
+                        setShowProjects(false);
+                      }}
+                      style={loadButtonStyle}
+                    >
+                      Load
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProject(p.id, p.name)}
+                      style={deleteButtonStyle}
+                      title="Delete project"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))
             )}
@@ -284,6 +304,16 @@ const projectRowStyle: React.CSSProperties = {
 const loadButtonStyle: React.CSSProperties = {
   padding: '4px 8px',
   background: '#89b4fa',
+  border: 'none',
+  borderRadius: '4px',
+  color: '#1e1e2e',
+  fontSize: '11px',
+  cursor: 'pointer',
+};
+
+const deleteButtonStyle: React.CSSProperties = {
+  padding: '4px 8px',
+  background: '#f38ba8',
   border: 'none',
   borderRadius: '4px',
   color: '#1e1e2e',
