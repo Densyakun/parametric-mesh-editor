@@ -1,5 +1,21 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "dist",
-  "buildCommand": "tsc -p tsconfig.core.json && tsc --noEmit && vite build"
+  "installCommand": "pnpm install && npx tsc -p tsconfig.core.json",
+  "functions": {
+    "api/health.ts": {},
+    "api/docs.ts": {},
+    "api/features/index.ts": {
+      "includeFiles": "dist/core/**"
+    },
+    "api/features/[name].ts": {
+      "includeFiles": "dist/core/**"
+    },
+    "api/evaluate.ts": {
+      "includeFiles": "dist/core/**"
+    },
+    "api/validate.ts": {
+      "includeFiles": "dist/core/**"
+    }
+  }
 }
