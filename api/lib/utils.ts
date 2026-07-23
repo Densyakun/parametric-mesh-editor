@@ -1,8 +1,9 @@
+import { DSLEvaluator } from '../../src/core/index.ts';
+
 let evaluator: any = null;
 
 export async function getEvaluator(): Promise<any> {
   if (!evaluator) {
-    const { DSLEvaluator } = await import('../../dist/core/index.js');
     evaluator = new DSLEvaluator();
   }
   return evaluator;
