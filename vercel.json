@@ -1,19 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "outputDirectory": "dist",
-  "installCommand": "pnpm install && npx tsc -p tsconfig.core.json",
-  "functions": {
-    "api/features/index.ts": {
-      "includeFiles": "src/core/**"
-    },
-    "api/features/[name].ts": {
-      "includeFiles": "src/core/**"
-    },
-    "api/evaluate.ts": {
-      "includeFiles": "src/core/**"
-    },
-    "api/validate.ts": {
-      "includeFiles": "src/core/**"
-    }
-  }
+  "outputDirectory": "dist"
 }
