@@ -2,9 +2,7 @@ let evaluator: any = null;
 
 export async function getEvaluator(): Promise<any> {
   if (!evaluator) {
-    // Vercelのesbuildが静的importをbundleしようとするのを防ぐため文字列連結で回避
-    const pkg = '@meshnative' + '/core';
-    const { DSLEvaluator } = await import(pkg);
+    const { DSLEvaluator } = await import('../../dist/core/index.js');
     evaluator = new DSLEvaluator();
   }
   return evaluator;

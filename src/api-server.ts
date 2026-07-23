@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { DSLEvaluator, type DSLResult } from '@meshnative/core';
+import { DSLEvaluator, type DSLResult } from './core';
 
 const PORT = 3001;
 const evaluator = new DSLEvaluator();

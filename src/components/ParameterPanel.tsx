@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAppStore } from '../store';
-import type { ParameterDef } from '@meshnative/core';
+import type { ParameterDef } from '../core';
 
 function ParameterSlider({ param, value, onChange }: {
   param: ParameterDef;

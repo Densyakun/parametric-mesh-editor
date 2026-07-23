@@ -1,7 +1,7 @@
 // AI Metadata panel for showing feature info to AI agents
 
 import React, { useState, useEffect } from 'react';
-import { DSLEvaluator } from '@meshnative/core';
+import { DSLEvaluator } from '../core';
 
 interface FeatureMeta {
   name: string;

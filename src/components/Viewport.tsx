@@ -5,7 +5,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAppStore } from '../store';
-import type { MeshData } from '@meshnative/core';
+import type { MeshData } from '../core';
 
 function MeshVisualization({ mesh }: { mesh: MeshData }) {
   const geometry = useMemo(() => {

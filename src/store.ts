@@ -11,8 +11,8 @@ import {
   type EvaluatedFeature,
   type HistoryState,
   type CommandContext,
-} from '@meshnative/core';
-import type { ParameterDef, MeshData } from '@meshnative/core';
+} from './core';
+import type { ParameterDef, MeshData } from './core';
 
 const DEFAULT_DSL = `const width = 10;
 const height = 10;
