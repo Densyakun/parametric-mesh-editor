@@ -1,6 +1,6 @@
 // Undo/Redo Command System
 
-import type { CommandType, Command } from './types.js';
+import type { CommandType, Command } from './types';
 
 export interface CommandContext {
   getDSL: () => string;

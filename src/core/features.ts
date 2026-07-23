@@ -1,12 +1,14 @@
 // Feature registry and standard features
 
-import { HalfEdgeMesh } from './mesh.js';
+import { HalfEdgeMesh } from './mesh';
+
 import type {
-  FeatureConfig,
-  EvaluationContext,
-  EvaluationResult,
+  FeatureDefinition,
+  ParameterDef,
   MeshData,
-} from './types.js';
+  Vec3,
+  ValidationResult,
+} from './types';
 
 // ============================================================
 // Feature Registry

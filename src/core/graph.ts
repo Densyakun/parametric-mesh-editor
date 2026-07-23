@@ -1,6 +1,6 @@
 // Dependency graph for feature evaluation
 
-import type { GraphNode, GraphEdge, NodeStatus } from './types.js';
+import type { GraphNode, GraphEdge, NodeStatus } from './types';
 
 export class DependencyGraph {
   private nodes = new Map<string, GraphNode>();

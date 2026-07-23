@@ -1,6 +1,5 @@
 node_modules/
-dist/
-.vite/
+.next/
 .vercel/
 *.local
 .env.local
@@ -29,5 +28,3 @@ pnpm-debug.log*
 
 # Supabase
 supabase/.temp/
-
-.vercel

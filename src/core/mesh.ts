@@ -1,6 +1,6 @@
 // Half-edge mesh data structure with SoA layout
 
-import type { MeshData, HalfEdgeData, FaceData, EdgeData, BoundingBox, Vec3 } from './types.js';
+import type { MeshData, HalfEdgeData, FaceData, EdgeData, BoundingBox, Vec3 } from './types';
 
 export class HalfEdgeMesh {
   private data: MeshData;

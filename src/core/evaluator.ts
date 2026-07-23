@@ -2,17 +2,17 @@
 
 import { Project } from 'ts-morph';
 import { compileSourceFileToJSON, evalSyntaxList } from 'tsx-safe-eval';
-import { HalfEdgeMesh } from './mesh.js';
-import { getFeature, getAllFeatures } from './features.js';
-import { DependencyGraph } from './graph.js';
+import { HalfEdgeMesh } from './mesh';
+import { getFeature, getAllFeatures } from './features';
+import { DependencyGraph } from './graph';
+
 import type {
-  GraphNode,
-  EvaluationContext,
-  EvaluationResult,
-  MeshData,
-  FeatureSchema,
-  ParameterDef,
-} from './types.js';
+  EvalResult,
+  FeatureDefinition,
+  ValidationResult,
+  ParameterValue,
+  Vec3,
+} from './types';
 
 export interface DSLResult {
   parameters: ParameterDef[];

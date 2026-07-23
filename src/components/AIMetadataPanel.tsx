@@ -1,7 +1,6 @@
 // AI Metadata panel for showing feature info to AI agents
 
 import React, { useState, useEffect } from 'react';
-import { DSLEvaluator } from '../core';
 
 interface FeatureMeta {
   name: string;
@@ -14,8 +13,14 @@ export function AIMetadataPanel() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    const evaluator = new DSLEvaluator();
-    setMetadata(evaluator.getAIMetadata());
+    fetch('/api/features', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('mna_api_key') || ''}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.features) setMetadata(data.features);
+      })
+      .catch(() => {});
   }, []);
 
   return (
