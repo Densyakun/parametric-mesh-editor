@@ -1,10 +1,13 @@
-import { DSLEvaluator } from '../../src/core/index.ts';
-
 let evaluator: any = null;
 
 export async function getEvaluator(): Promise<any> {
   if (!evaluator) {
-    evaluator = new DSLEvaluator();
+    try {
+      const { DSLEvaluator } = await import('../../src/core/index.ts');
+      evaluator = new DSLEvaluator();
+    } catch (e: any) {
+      throw new Error(`Failed to load evaluator: ${e.message}`);
+    }
   }
   return evaluator;
 }
