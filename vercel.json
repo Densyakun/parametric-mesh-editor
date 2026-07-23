@@ -3,8 +3,6 @@
   "outputDirectory": "dist",
   "installCommand": "pnpm install && npx tsc -p tsconfig.core.json",
   "functions": {
-    "api/health.ts": {},
-    "api/docs.ts": {},
     "api/features/index.ts": {
       "includeFiles": "dist/core/**"
     },
