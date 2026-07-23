@@ -1,9 +1,12 @@
+import { createRequire } from 'node:module';
+
 let evaluator: any = null;
 
 export async function getEvaluator(): Promise<any> {
   if (!evaluator) {
-    const mod = await import(process.cwd() + '/dist/core/index.js');
-    evaluator = new mod.DSLEvaluator();
+    const require = createRequire(import.meta.url);
+    const { DSLEvaluator } = require('../' + 'dist/core/index.js');
+    evaluator = new DSLEvaluator();
   }
   return evaluator;
 }
