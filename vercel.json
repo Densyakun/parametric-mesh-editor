@@ -1,6 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "outputDirectory": "dist",
-  "buildCommand": "pnpm --filter @meshnative/core build && pnpm --filter @meshnative/app build"
+  "outputDirectory": "dist"
 }
