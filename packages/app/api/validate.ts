@@ -22,7 +22,7 @@ export default {
       }
 
       const evaluator = getEvaluator();
-      const result = evaluator.evaluate(body.dsl);
+      const result = await evaluator.evaluate(body.dsl);
 
       return jsonResponse(200, {
         valid: result.errors.length === 0,

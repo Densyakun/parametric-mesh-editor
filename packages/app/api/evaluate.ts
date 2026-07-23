@@ -23,7 +23,7 @@ export default {
 
       const evaluator = getEvaluator();
       const startTime = performance.now();
-      const result = evaluator.evaluate(body.dsl);
+      const result = await evaluator.evaluate(body.dsl);
       const evaluationTime = performance.now() - startTime;
 
       return jsonResponse(200, {
