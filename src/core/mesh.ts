@@ -521,8 +521,8 @@ export class HalfEdgeMesh {
         const b = a + tubularSegments + 1;
         const c = a + 1;
         const d = b + 1;
-        indices.push(a, c, b);
-        indices.push(c, d, b);
+        indices.push(a, b, c);
+        indices.push(b, d, c);
       }
     }
 

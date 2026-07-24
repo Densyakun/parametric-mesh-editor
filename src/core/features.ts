@@ -56,6 +56,55 @@ function extractIndices(mesh: MeshData): number[] {
 }
 
 // ============================================================
+// Transform helpers for primitives
+// ============================================================
+
+const transformParams: ParameterDef[] = [
+  { name: 'px', value: 0, type: 'number', displayName: 'Position X' },
+  { name: 'py', value: 0, type: 'number', displayName: 'Position Y' },
+  { name: 'pz', value: 0, type: 'number', displayName: 'Position Z' },
+  { name: 'rx', value: 0, type: 'number', displayName: 'Rotate X (deg)' },
+  { name: 'ry', value: 0, type: 'number', displayName: 'Rotate Y (deg)' },
+  { name: 'rz', value: 0, type: 'number', displayName: 'Rotate Z (deg)' },
+];
+
+function degToRad(d: number): number { return d * Math.PI / 180; }
+
+function composeTransformMatrix(
+  px: number, py: number, pz: number,
+  rx: number, ry: number, rz: number,
+): number[] {
+  const ax = degToRad(rx), ay = degToRad(ry), az = degToRad(rz);
+  const cx = Math.cos(ax), sx = Math.sin(ax);
+  const cy = Math.cos(ay), sy = Math.sin(ay);
+  const cz = Math.cos(az), sz = Math.sin(az);
+
+  // Rz * Ry * Rx
+  const m00 = cy * cz, m01 = sx * sy * cz - cx * sz, m02 = cx * sy * cz + sx * sz;
+  const m10 = cy * sz, m11 = sx * sy * sz + cx * cz, m12 = cx * sy * sz - sx * cz;
+  const m20 = -sy,    m21 = sx * cy,                m22 = cx * cy;
+
+  // Column-major 4x4 (same layout as HalfEdgeMesh.transform)
+  return [
+    m00, m10, m20, 0,
+    m01, m11, m21, 0,
+    m02, m12, m22, 0,
+    px,  py,  pz,  1,
+  ];
+}
+
+function applyTransform(mesh: HalfEdgeMesh, ctx: EvaluationContext): HalfEdgeMesh {
+  const px = ctx.parameters.get('px') ?? 0;
+  const py = ctx.parameters.get('py') ?? 0;
+  const pz = ctx.parameters.get('pz') ?? 0;
+  const rx = ctx.parameters.get('rx') ?? 0;
+  const ry = ctx.parameters.get('ry') ?? 0;
+  const rz = ctx.parameters.get('rz') ?? 0;
+  if (px === 0 && py === 0 && pz === 0 && rx === 0 && ry === 0 && rz === 0) return mesh;
+  return mesh.transform(composeTransformMatrix(px, py, pz, rx, ry, rz));
+}
+
+// ============================================================
 // Standard Features
 // ============================================================
 
@@ -72,6 +121,7 @@ registerFeature({
       { name: 'width', value: 10, type: 'number', min: 0.01, displayName: 'Width' },
       { name: 'height', value: 10, type: 'number', min: 0.01, displayName: 'Height' },
       { name: 'depth', value: 10, type: 'number', min: 0.01, displayName: 'Depth' },
+      ...transformParams,
     ],
     inputs: [],
     outputs: [{ name: 'mesh', type: 'mesh' }],
@@ -80,7 +130,7 @@ registerFeature({
     const width = ctx.parameters.get('width') ?? 10;
     const height = ctx.parameters.get('height') ?? 10;
     const depth = ctx.parameters.get('depth') ?? 10;
-    const mesh = toMeshData(HalfEdgeMesh.createBox(width, height, depth));
+    const mesh = toMeshData(applyTransform(HalfEdgeMesh.createBox(width, height, depth), ctx));
     return {
       outputs: new Map([['mesh', mesh]]),
       mesh,
@@ -100,6 +150,7 @@ registerFeature({
       { name: 'radius', value: 5, type: 'number', min: 0.01, displayName: 'Radius' },
       { name: 'widthSegments', value: 32, type: 'number', min: 3, max: 256, displayName: 'Width Segments' },
       { name: 'heightSegments', value: 16, type: 'number', min: 2, max: 128, displayName: 'Height Segments' },
+      ...transformParams,
     ],
     inputs: [],
     outputs: [{ name: 'mesh', type: 'mesh' }],
@@ -108,7 +159,7 @@ registerFeature({
     const radius = ctx.parameters.get('radius') ?? 5;
     const widthSegments = ctx.parameters.get('widthSegments') ?? 32;
     const heightSegments = ctx.parameters.get('heightSegments') ?? 16;
-    const mesh = toMeshData(HalfEdgeMesh.createSphere(radius, widthSegments, heightSegments));
+    const mesh = toMeshData(applyTransform(HalfEdgeMesh.createSphere(radius, widthSegments, heightSegments), ctx));
     return {
       outputs: new Map([['mesh', mesh]]),
       mesh,
@@ -128,6 +179,7 @@ registerFeature({
       { name: 'radius', value: 5, type: 'number', min: 0.01, displayName: 'Radius' },
       { name: 'height', value: 10, type: 'number', min: 0.01, displayName: 'Height' },
       { name: 'segments', value: 32, type: 'number', min: 3, max: 256, displayName: 'Segments' },
+      ...transformParams,
     ],
     inputs: [],
     outputs: [{ name: 'mesh', type: 'mesh' }],
@@ -136,7 +188,7 @@ registerFeature({
     const radius = ctx.parameters.get('radius') ?? 5;
     const height = ctx.parameters.get('height') ?? 10;
     const segments = ctx.parameters.get('segments') ?? 32;
-    const mesh = toMeshData(HalfEdgeMesh.createCylinder(radius, height, segments));
+    const mesh = toMeshData(applyTransform(HalfEdgeMesh.createCylinder(radius, height, segments), ctx));
     return {
       outputs: new Map([['mesh', mesh]]),
       mesh,
@@ -274,6 +326,7 @@ registerFeature({
       { name: 'radius', value: 5, type: 'number', min: 0.01, displayName: 'Radius' },
       { name: 'height', value: 10, type: 'number', min: 0.01, displayName: 'Height' },
       { name: 'segments', value: 32, type: 'number', min: 3, max: 256, displayName: 'Segments' },
+      ...transformParams,
     ],
     inputs: [],
     outputs: [{ name: 'mesh', type: 'mesh' }],
@@ -282,7 +335,7 @@ registerFeature({
     const radius = ctx.parameters.get('radius') ?? 5;
     const height = ctx.parameters.get('height') ?? 10;
     const segments = ctx.parameters.get('segments') ?? 32;
-    const mesh = toMeshData(HalfEdgeMesh.createCone(radius, height, segments));
+    const mesh = toMeshData(applyTransform(HalfEdgeMesh.createCone(radius, height, segments), ctx));
     return {
       outputs: new Map([['mesh', mesh]]),
       mesh,
@@ -303,6 +356,7 @@ registerFeature({
       { name: 'tube', value: 2, type: 'number', min: 0.01, displayName: 'Tube Radius' },
       { name: 'radialSegments', value: 32, type: 'number', min: 3, max: 256, displayName: 'Radial Segments' },
       { name: 'tubularSegments', value: 16, type: 'number', min: 3, max: 128, displayName: 'Tubular Segments' },
+      ...transformParams,
     ],
     inputs: [],
     outputs: [{ name: 'mesh', type: 'mesh' }],
@@ -312,7 +366,7 @@ registerFeature({
     const tube = ctx.parameters.get('tube') ?? 2;
     const radialSegments = ctx.parameters.get('radialSegments') ?? 32;
     const tubularSegments = ctx.parameters.get('tubularSegments') ?? 16;
-    const mesh = toMeshData(HalfEdgeMesh.createTorus(radius, tube, radialSegments, tubularSegments));
+    const mesh = toMeshData(applyTransform(HalfEdgeMesh.createTorus(radius, tube, radialSegments, tubularSegments), ctx));
     return {
       outputs: new Map([['mesh', mesh]]),
       mesh,
@@ -517,7 +571,7 @@ registerFeature({
 // Helper functions
 // ============================================================
 
-function concatenateMeshes(...meshes: MeshData[]): MeshData {
+export function concatenateMeshes(...meshes: MeshData[]): MeshData {
   if (meshes.length === 0) {
     return toMeshData(HalfEdgeMesh.createBox(1, 1, 1));
   }

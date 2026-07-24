@@ -48,6 +48,7 @@ export type OutputType =
 
 export interface ParameterDef {
   name: string;
+  featureId?: string;
   value: number | string | boolean | number[];
   type: 'number' | 'string' | 'boolean' | 'vector';
   min?: number;

@@ -1,9 +1,12 @@
 // TSX DSL Evaluator using tsx-safe-eval
 
 import { Project } from 'ts-morph';
-import { compileSourceFileToJSON, evalSyntaxList } from 'tsx-safe-eval';
+import {
+  compileSourceFileToJSON,
+  evalSyntaxList,
+} from 'tsx-safe-eval';
 import { HalfEdgeMesh } from './mesh';
-import { getFeature, getAllFeatures } from './features';
+import { getFeature, getAllFeatures, concatenateMeshes } from './features';
 import { DependencyGraph } from './graph';
 
 import type {
@@ -67,11 +70,17 @@ export class DSLEvaluator {
         return { isInitializing: false, exports: { object: {} } };
       });
 
-      for (let i = features.length - 1; i >= 0; i--) {
-        if (features[i].mesh) {
-          resultMesh = features[i].mesh;
-          break;
+      // Concatenate all feature meshes (skip Group features that already combine inputs)
+      const meshesToCombine: MeshData[] = [];
+      for (const f of features) {
+        if (f.mesh && f.name !== 'Group') {
+          meshesToCombine.push(f.mesh);
         }
+      }
+      if (meshesToCombine.length === 1) {
+        resultMesh = meshesToCombine[0];
+      } else if (meshesToCombine.length > 1) {
+        resultMesh = concatenateMeshes(...meshesToCombine);
       }
     } catch (e: any) {
       const msg = e.message || String(e);
@@ -119,12 +128,15 @@ export class DSLEvaluator {
         }
       }
 
+      const id = `${featureConfig.name}_${features.length}`;
+
       for (const paramDef of featureConfig.schema.parameters) {
         if (!(paramDef.name in params)) {
           params[paramDef.name] = paramDef.value;
         }
         parameters.push({
           name: paramDef.name,
+          featureId: id,
           value: params[paramDef.name],
           type: paramDef.type,
           min: paramDef.min,
@@ -153,7 +165,6 @@ export class DSLEvaluator {
         console.error(`Error evaluating ${featureConfig.name}:`, e);
       }
 
-      const id = `${featureConfig.name}_${features.length}`;
       const feature: EvaluatedFeature = {
         id,
         name: featureConfig.name,

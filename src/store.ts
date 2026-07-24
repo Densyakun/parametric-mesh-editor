@@ -153,9 +153,28 @@ function createCommandContext(get: () => AppState, set: (partial: Partial<AppSta
     setDSL: (dsl: string) => set({ dsl }),
     getParameter: (name: string) => get().parameterValues[name],
     setParameter: (name: string, value: any) => {
-      const { dsl, parameterValues } = get();
+      const { dsl, parameterValues, parameters } = get();
       const newValues = { ...parameterValues, [name]: value };
-      const newDsl = updateDslParameter(dsl, name, value);
+
+      const parts = name.split(':');
+      const paramName = parts.length > 1 ? parts[1] : parts[0];
+      const featureId = parts.length > 1 ? parts[0] : undefined;
+
+      const paramInfoMap = extractParamInfoMap(dsl);
+      const info = featureId ? paramInfoMap.get(name) : undefined;
+
+      let newDsl = dsl;
+      if (info?.varName) {
+        newDsl = updateDslParameter(dsl, info.varName, value);
+      } else if (info) {
+        newDsl = updateJsxAttribute(dsl, info.featureName, info.featureIndex, paramName, value);
+      } else if (featureId) {
+        const fi = featureId.lastIndexOf('_');
+        const featureName = fi > 0 ? featureId.slice(0, fi) : featureId;
+        const featureIndex = fi > 0 ? parseInt(featureId.slice(fi + 1), 10) : 0;
+        newDsl = insertJsxAttribute(dsl, featureName, featureIndex, paramName, value);
+      }
+
       set({ parameterValues: newValues, dsl: newDsl });
     },
     requestEvaluation: () => {
@@ -277,7 +296,8 @@ function handleApiResult(
 ) {
   const parameterValues: Record<string, any> = {};
   for (const param of apiResult.parameters) {
-    parameterValues[param.name] = param.value;
+    const key = param.featureId ? `${param.featureId}:${param.name}` : param.name;
+    parameterValues[key] = param.value;
   }
 
   set({
@@ -296,6 +316,75 @@ function updateDslParameter(dsl: string, name: string, value: any): string {
     'g'
   );
   return dsl.replace(regex, `$1${JSON.stringify(value)}$3`);
+}
+
+function extractParamInfoMap(dsl: string): Map<string, { varName: string | null; featureName: string; featureIndex: number }> {
+  const map = new Map<string, { varName: string | null; featureName: string; featureIndex: number }>();
+  const featureCounts: Record<string, number> = {};
+
+  const jsxRegex = /<([A-Z]\w*)([\s>][\s\S]*?)\/?>/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = jsxRegex.exec(dsl)) !== null) {
+    const featureName = match[1];
+    const attrsStr = match[2];
+
+    const featureIndex = featureCounts[featureName] ?? 0;
+    featureCounts[featureName] = featureIndex + 1;
+
+    const attrRegex = /(\w+)\s*=\s*\{([^}]*)\}/g;
+    let attrMatch: RegExpExecArray | null;
+
+    while ((attrMatch = attrRegex.exec(attrsStr)) !== null) {
+      const propName = attrMatch[1];
+      const expr = attrMatch[2].trim();
+      const key = `${featureName}_${featureIndex}:${propName}`;
+      const isVar = /^[a-zA-Z_]\w*$/.test(expr);
+      map.set(key, { varName: isVar ? expr : null, featureName, featureIndex });
+    }
+  }
+
+  return map;
+}
+
+function updateJsxAttribute(dsl: string, featureName: string, featureIndex: number, propName: string, value: any): string {
+  let currentFeatureIndex = 0;
+  const jsxRegex = new RegExp(`(<${escapeRegex(featureName)}[\\s>][\\s\\S]*?\\/?>)`, 'g');
+  let match: RegExpExecArray | null;
+
+  while ((match = jsxRegex.exec(dsl)) !== null) {
+    if (currentFeatureIndex !== featureIndex) {
+      currentFeatureIndex++;
+      continue;
+    }
+
+    const fullMatch = match[1];
+    const attrRegex = new RegExp(`(${escapeRegex(propName)}\\s*=\\s*)\\{[^}]*\\}`);
+    const updated = fullMatch.replace(attrRegex, `$1{${JSON.stringify(value)}}`);
+    return dsl.slice(0, match.index) + updated + dsl.slice(match.index + fullMatch.length);
+  }
+
+  return dsl;
+}
+
+function insertJsxAttribute(dsl: string, featureName: string, featureIndex: number, propName: string, value: any): string {
+  let currentFeatureIndex = 0;
+  const jsxRegex = new RegExp(`(<${escapeRegex(featureName)})([\\s>][\\s\\S]*?)(\\/?>)`, 'g');
+  let match: RegExpExecArray | null;
+
+  while ((match = jsxRegex.exec(dsl)) !== null) {
+    if (currentFeatureIndex !== featureIndex) {
+      currentFeatureIndex++;
+      continue;
+    }
+
+    const insertBefore = match[3];
+    const attr = ` ${propName}={${JSON.stringify(value)}}`;
+    const pos = match.index + match[1].length;
+    return dsl.slice(0, pos) + attr + dsl.slice(pos);
+  }
+
+  return dsl;
 }
 
 function escapeRegex(str: string): string {

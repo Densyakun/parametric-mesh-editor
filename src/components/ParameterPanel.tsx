@@ -4,8 +4,9 @@ import React from 'react';
 import { useAppStore } from '../store';
 import type { ParameterDef } from '../core';
 
-function ParameterSlider({ param, value, onChange }: {
+function ParameterSlider({ param, compositeKey, value, onChange }: {
   param: ParameterDef;
+  compositeKey: string;
   value: any;
   onChange: (value: any) => void;
 }) {
@@ -61,6 +62,16 @@ export function ParameterPanel() {
   const currentMesh = useAppStore(state => state.currentMesh);
   const features = useAppStore(state => state.features);
 
+  // Group parameters by featureId
+  const groupedParams = new Map<string, ParameterDef[]>();
+  for (const param of parameters) {
+    const featureId = param.featureId ?? 'default';
+    if (!groupedParams.has(featureId)) {
+      groupedParams.set(featureId, []);
+    }
+    groupedParams.get(featureId)!.push(param);
+  }
+
   return (
     <div style={containerStyle}>
       <div style={headerStyle}>Parameters</div>
@@ -71,14 +82,32 @@ export function ParameterPanel() {
             No parameters defined
           </div>
         ) : (
-          parameters.map(param => (
-            <ParameterSlider
-              key={param.name}
-              param={param}
-              value={parameterValues[param.name] ?? param.value}
-              onChange={(value) => updateParameter(param.name, value)}
-            />
-          ))
+          Array.from(groupedParams.entries()).map(([featureId, params]) => {
+            const feature = features.find(f => f.id === featureId);
+            const featureName = feature?.name ?? featureId;
+            const compositeKey = params[0]?.featureId ? `${featureId}:${params[0].name}` : params[0].name;
+
+            return (
+              <div key={featureId} style={{ marginBottom: '16px' }}>
+                <div style={featureHeaderStyle}>
+                  {featureName}
+                  <span style={featureIdStyle}>#{featureId.split('_').pop()}</span>
+                </div>
+                {params.map(param => {
+                  const key = param.featureId ? `${param.featureId}:${param.name}` : param.name;
+                  return (
+                    <ParameterSlider
+                      key={key}
+                      param={param}
+                      compositeKey={key}
+                      value={parameterValues[key] ?? param.value}
+                      onChange={(value) => updateParameter(key, value)}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })
         )}
       </div>
 
@@ -166,6 +195,19 @@ const sliderStyle: React.CSSProperties = {
   borderRadius: '2px',
   outline: 'none',
   cursor: 'pointer',
+};
+
+const featureHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '4px 8px',
+  background: '#313244',
+  borderRadius: '4px',
+  marginBottom: '8px',
+  fontSize: '12px',
+  fontWeight: 'bold',
+  color: '#89b4fa',
 };
 
 const statsContainerStyle: React.CSSProperties = {
