@@ -85,3 +85,80 @@ create trigger projects_updated_at
   before update on projects
   for each row
   execute function update_updated_at();
+
+-- SECURITY DEFINER functions for server-side API key validation (bypasses RLS)
+create or replace function validate_api_key(hash text)
+returns table(user_id uuid, is_active boolean)
+language sql
+security definer
+set search_path = public
+as $$
+  select ak.user_id, ak.is_active
+  from api_keys ak
+  where ak.key_hash = hash
+  limit 1;
+$$;
+
+create or replace function touch_api_key(hash text)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update api_keys set last_used_at = now() where key_hash = hash;
+$$;
+
+-- SECURITY DEFINER functions for project CRUD (bypasses RLS for API key auth)
+create or replace function list_projects(uid uuid)
+returns table(id uuid, user_id uuid, name text, description text, dsl text, is_public boolean, created_at timestamptz, updated_at timestamptz)
+language sql
+security definer
+set search_path = public
+as $$
+  select p.id, p.user_id, p.name, p.description, p.dsl, p.is_public, p.created_at, p.updated_at
+  from projects p where p.user_id = uid order by p.updated_at desc;
+$$;
+
+create or replace function get_project(project_id uuid, uid uuid)
+returns table(id uuid, user_id uuid, name text, description text, dsl text, is_public boolean, created_at timestamptz, updated_at timestamptz)
+language sql
+security definer
+set search_path = public
+as $$
+  select p.id, p.user_id, p.name, p.description, p.dsl, p.is_public, p.created_at, p.updated_at
+  from projects p where p.id = project_id and p.user_id = uid;
+$$;
+
+create or replace function create_project(uid uuid, project_name text, project_dsl text, project_description text default null)
+returns table(id uuid, user_id uuid, name text, description text, dsl text, is_public boolean, created_at timestamptz, updated_at timestamptz)
+language sql
+security definer
+set search_path = public
+as $$
+  insert into projects (user_id, name, dsl, description) values (uid, project_name, project_dsl, project_description)
+  returning id, user_id, name, description, dsl, is_public, created_at, updated_at;
+$$;
+
+create or replace function update_project(project_id uuid, uid uuid, project_name text default null, project_dsl text default null, project_description text default null)
+returns table(id uuid, user_id uuid, name text, description text, dsl text, is_public boolean, created_at timestamptz, updated_at timestamptz)
+language sql
+security definer
+set search_path = public
+as $$
+  update projects set
+    name = coalesce(project_name, name),
+    dsl = coalesce(project_dsl, dsl),
+    description = project_description,
+    updated_at = now()
+  where id = project_id and user_id = uid
+  returning id, user_id, name, description, dsl, is_public, created_at, updated_at;
+$$;
+
+create or replace function delete_project(project_id uuid, uid uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from projects where id = project_id and user_id = uid;
+$$;

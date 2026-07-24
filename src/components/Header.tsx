@@ -4,7 +4,15 @@ import React, { useState, useRef } from 'react';
 import { useAppStore } from '../store';
 import { useAuth } from '../lib/auth';
 import { AuthButton } from './Auth';
-import { createProject, saveProjectDSL, listProjects, deleteProject } from '../lib/projects';
+
+async function apiFetch(path: string, options: RequestInit = {}) {
+  const { supabase } = await import('../lib/supabase');
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(options.headers as Record<string, string> || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return fetch(`/api${path}`, { ...options, headers });
+}
 
 export function Header() {
   const { user } = useAuth();
@@ -28,11 +36,12 @@ export function Header() {
 
     try {
       if (projectId) {
-        await saveProjectDSL(projectId, dsl);
+        await apiFetch(`/projects/${projectId}`, { method: 'PUT', body: JSON.stringify({ dsl }) });
       } else {
-        const project = await createProject(user.id, projectName, dsl);
-        if (project) {
-          setProject(project.id, project.name);
+        const res = await apiFetch('/projects', { method: 'POST', body: JSON.stringify({ name: projectName, dsl }) });
+        const data = await res.json();
+        if (data.project) {
+          setProject(data.project.id, data.project.name);
         }
       }
     } catch (e) {
@@ -77,15 +86,17 @@ export function Header() {
 
   const handleLoadProjects = async () => {
     if (!user) return;
-    const projs = await listProjects(user.id);
-    setProjects(projs);
+    const res = await apiFetch('/projects');
+    const data = await res.json();
+    setProjects(data.projects ?? []);
     setShowProjects(true);
   };
 
   const handleDeleteProject = async (projectId: string, projectName: string) => {
     if (!window.confirm(`「${projectName}」を削除しますか？この操作は取り消せません。`)) return;
-    const ok = await deleteProject(projectId);
-    if (ok) {
+    const res = await apiFetch(`/projects/${projectId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
       setProjects(prev => prev.filter(p => p.id !== projectId));
       if (useAppStore.getState().projectId === projectId) {
         resetToDefault();
